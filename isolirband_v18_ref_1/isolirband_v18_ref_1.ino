@@ -216,7 +216,7 @@ void loop() {
   }
   else {
     no_sensor_counter ++;
-    if(no_sensor_counter >= 50){
+    if(no_sensor_counter >= 100){
       stop_motor(RIGHT);
       stop_motor(LEFT);
 //  #ifdef SERIAL_ON
@@ -243,10 +243,10 @@ void loop() {
   //motor_R_speed = (50 - pid);
 
   unsigned long abs_pid = abs(pid);
-  int v = map(abs_pid,0,50,100,0);
+  int v = map(abs_pid,0,50,50,0); // ZOHAR changed for faster motor
   unsigned long vm = (abs_pid*TURN_FACTOR)/1000;
 
-  v = constrain(v,20,100);
+  v = constrain(v,10,100);
   //vm = constrain(vm,0,100);
   
   //motor_L_speed = map(pid,-50,50,-50,100);
