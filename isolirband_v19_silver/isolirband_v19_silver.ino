@@ -71,8 +71,9 @@ const int MOTOR_A_DIR = 10; // left motor Motor B Direction
 const int MOTOR_B_PWM = 11; // right motor Motor B PWM Speed
 const int MOTOR_B_DIR = 12; // right motor Motor B Direction
 
-void drive_motor ( motor_t motor, motor_direction_t dir, unsigned int spd);
+void drive_motor ( motor_t motor_e , int spd);
 void stop_motor ( motor_t motor );
+int split();
 
 void motor_r_interrupt();
 void motor_l_interrupt();
@@ -212,6 +213,21 @@ void loop() {
   line_sensor_value = read_line_sensor(); 
   if (line_sensor_value != -1){
     line_sensor_value-=2000;
+    int spl = split();
+    if(spl == -1){
+      final_line_sensor_value = line_sensor_value;
+    }
+
+    else{
+      final_line_sensor_value = spl - 3000;
+    }
+    mySerial.print(" spl = ");
+    mySerial.print(spl);
+    mySerial.print(" final_line_sensor_value = ");
+    mySerial.print(final_line_sensor_value);
+    mySerial.print(" time = ");
+    unsigned long time = millis();
+    mySerial.print(time);
     no_sensor_counter = 0;
   }
   else {
@@ -229,15 +245,16 @@ void loop() {
         #endif
       }
     }
+
     if(Perror_old >= 0){
-      line_sensor_value = 2000;
+      final_line_sensor_value = 2000;
     }
     else{
-      line_sensor_value = -2000;
+      final_line_sensor_value = -2000;
     }
   }
-  pid = PID(line_sensor_value,Perror_old);
-  Perror_old = line_sensor_value;
+  pid = PID(final_line_sensor_value,Perror_old);
+  Perror_old = final_line_sensor_value;
 
   //motor_L_speed = (50 + pid);
   //motor_R_speed = (50 - pid);
@@ -264,7 +281,7 @@ void loop() {
 #ifdef SERIAL_ON
 
   //time = millis();
-  mySerial.print("v= ");
+  mySerial.print(", v= ");
   mySerial.print(v);
   
   mySerial.print(", |pid|= ");
@@ -294,6 +311,14 @@ int read_line_sensor() {
   long p3 = 0;
   long p4 = 0;
   long p5 = 0;
+
+  int s1 = 0;
+  int s2 = 0;
+  int s3 = 0;
+  int s4 = 0;
+  int s5 = 0;
+
+  int read_sensor;
 
   int sum = 0;
   long psum = 0;
@@ -350,8 +375,33 @@ int read_line_sensor() {
   mySerial.println(s5_value);
 */
   if((s1_value < S_WHITE) and (s2_value < S_WHITE) and (s3_value < S_WHITE) and (s4_value < S_WHITE) and (s5_value < S_WHITE)){
+    black_sensors = 0;
     return -1;
   }
+  if(s1_value > S_WHITE){
+    s1 = 1;
+  }
+
+  if(s2_value > S_WHITE){
+    s2 = 1;
+  }
+
+  if(s3_value > S_WHITE){
+    s3 = 1;
+  }
+
+  if(s4_value > S_WHITE){
+    s4 = 1;
+  }
+
+  if(s5_value > S_WHITE){
+    s5 = 1;
+  }
+
+  read_sensor = (s1 + (s2 * 2) + (s3 * 4) + (s4 * 8) + (s5 * 16));
+  black_sensors = read_sensor;
+  mySerial.print(" black_sensors = ");
+  mySerial.print(read_sensor);
 
   p1 = (long) s1_value * L_s1;
   p2 = (long) s2_value * L_s2;
@@ -458,6 +508,161 @@ int update_min_max (uint8_t sn, int n){
     return flag;
 }
 
+int split (){
+  int split_counter = 0;
+ // return -1;
+  switch(black_sensors){
+    case 5:
+
+   /* case 7:
+      if(TURN_SIDE[split_counter] == 'L'){
+        return 1000;
+      }
+      else{
+        return 3000;
+      }
+*/
+    case 9:
+      if(TURN_SIDE[split_counter] == 'L'){
+      return 1000;
+      }
+      else{
+        return 4000;
+      }
+    case 10:
+      if(TURN_SIDE[split_counter] == 'L'){
+      return 2000;
+      }
+      else{
+        return 4000;
+      }
+    case 11:
+      if(TURN_SIDE[split_counter] == 'L'){
+      return 1000;
+      }
+      else{
+        return 4000;
+      }
+    case 13:
+      if(TURN_SIDE[split_counter] == 'L'){
+      return 1000;
+      }
+      else{
+        return 4000;
+      }
+  /*  case 14:
+      if(TURN_SIDE[split_counter] == 'L'){
+      return 2000;
+      }
+      else{
+        return 4000;
+      }
+    case 15:
+      if(TURN_SIDE[split_counter] == 'L'){
+      return 1000;
+      }
+      else{
+        return 4000;
+      }*/
+    case 17:
+      if(TURN_SIDE[split_counter] == 'L'){
+      return 1000;
+      }
+      else{
+        return 5000;
+      }
+    case 18:
+      if(TURN_SIDE[split_counter] == 'L'){
+      return 2000;
+      }
+      else{
+        return 5000;
+      }
+    case 19:
+      if(TURN_SIDE[split_counter] == 'L'){
+      return 1000;
+      }
+      else{
+        return 5000;
+      }
+    case 20:
+      if(TURN_SIDE[split_counter] == 'L'){
+      return 3000;
+      }
+      else{
+        return 5000;
+      }
+    case 21:
+      if(TURN_SIDE[split_counter] == 'L'){
+      return 1000;
+      }
+      else{
+        return 5000;
+      }
+    case 22:
+      if(TURN_SIDE[split_counter] == 'L'){
+      return 2000;
+      }
+      else{
+        return 5000;
+      }
+    case 23:
+      
+    case 25:
+      if(TURN_SIDE[split_counter] == 'L'){
+      return 1000;
+      }
+      else{
+        return 5000;
+      }
+    case 26:
+      if(TURN_SIDE[split_counter] == 'L'){
+      return 2000;
+      }
+      else{
+        return 5000;
+      }
+    case 27:
+      if(TURN_SIDE[split_counter] == 'L'){
+      return 1000;
+      }
+      else{
+        return 5000;
+      }
+    /*case 28:
+      if(TURN_SIDE[split_counter] == 'L'){
+      return 3000;
+      }
+      else{
+        return 5000;
+      }
+    case 29:
+      if(TURN_SIDE[split_counter] == 'L'){
+      return 1000;
+      }
+      else{
+        return 5000;
+      }
+    case 30:
+      if(TURN_SIDE[split_counter] == 'L'){
+      return 2000;
+      }
+      else{
+        return 5000;
+      }
+    case 31:
+      if(TURN_SIDE[split_counter] == 'L'){
+        return 1000;
+      }
+      else{
+        return 5000;
+      }*/
+      default:
+        return -1;
+  }
+}
+
+
 int PID (int line_sensor_value, int Perror_old) {
   int Perror = line_sensor_value;
   int Derror = (Perror - Perror_old);
@@ -483,7 +688,7 @@ int PID (int line_sensor_value, int Perror_old) {
   mySerial.print(", D = ");
   mySerial.print(Derror);
   mySerial.print(", F = ");
-  mySerial.println(f);
+  mySerial.print(f);
   f = constrain(f,-50,50);
   return f;
 
