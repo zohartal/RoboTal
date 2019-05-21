@@ -1,7 +1,7 @@
 const int S_WHITE = 350;
 
 int black_sensors;
-const char TURN_SIDE [] {'R','R','L','L','L'};
+const char TURN_SIDE[] = {'R','R','L','L','L'};
 int final_line_sensor_value;
 
 int read_line_sensor();

@@ -3,7 +3,7 @@
 #include "calibration.h"
 #include "display.h"
 #include <SoftwareSerial.h>
-
+//#include "sensor_monitor.c"
 
 //#include <arduino.h>
 //#define ARDUINO_MICRO
@@ -189,7 +189,7 @@ void setup() {
   delay(500);
 
   mySerial.println("Button pressed");
-
+  sensor_monitor();
 }
 
 void loop() {
@@ -837,5 +837,126 @@ void motor_l_interrupt() {
   }
   else {
     motor_l_cnt++;
+  }
+}
+
+
+
+void sensor_monitor () { 
+ Serial.begin(9600);
+
+  while (1) {
+    long p1 = 0;
+    long p2 = 0;
+    long p3 = 0;
+    long p4 = 0;
+    long p5 = 0;
+  
+    int s1 = 0;
+    int s2 = 0;
+    int s3 = 0;
+    int s4 = 0;
+    int s5 = 0;
+  
+    int read_sensor;
+  
+    int sum = 0;
+    long psum = 0;
+  
+    int line = 0;
+  
+    int s1_value = 0;
+    int s2_value = 0;
+    int s3_value = 0;
+    int s4_value = 0;
+    int s5_value = 0;
+  
+    s1_value = analogRead(S1);
+    s2_value = analogRead(S2);
+    s3_value = analogRead(S3);
+    s4_value = analogRead(S4);
+    s5_value = analogRead(S5);
+  
+    s1_value = constrain(s1_value,S_MIN_ARRAY[0],S_MAX_ARRAY[0]);
+    s2_value = constrain(s2_value,S_MIN_ARRAY[1],S_MAX_ARRAY[1]);
+    s3_value = constrain(s3_value,S_MIN_ARRAY[2],S_MAX_ARRAY[2]); 
+    s4_value = constrain(s4_value,S_MIN_ARRAY[3],S_MAX_ARRAY[3]);
+    s5_value = constrain(s5_value,S_MIN_ARRAY[4],S_MAX_ARRAY[4]);
+  
+  
+    Serial.print(",s1_value = ");
+    Serial.print(s1_value);
+    Serial.print(",s2_value = ");
+    Serial.print(s2_value);
+    Serial.print(",s3_value = ");
+    Serial.print(s3_value);
+    Serial.print(",s4_value = ");
+    Serial.print(s4_value);
+    Serial.print(",s5_value = ");
+    Serial.println(s5_value);
+  
+  
+    s1_value = map(s1_value,S_MIN_ARRAY[0],S_MAX_ARRAY[0],0,1000);
+    s2_value = map(s2_value,S_MIN_ARRAY[1],S_MAX_ARRAY[1],0,1000);
+    s3_value = map(s3_value,S_MIN_ARRAY[2],S_MAX_ARRAY[2],0,1000);
+    s4_value = map(s4_value,S_MIN_ARRAY[3],S_MAX_ARRAY[3],0,1000);
+    s5_value = map(s5_value,S_MIN_ARRAY[4],S_MAX_ARRAY[4],0,1000);
+    
+  
+    Serial.print("after map: s1_value = ");
+    Serial.print(s1_value);
+    Serial.print(",s2_value = ");
+    Serial.print(s2_value);
+    Serial.print(",s3_value = ");
+    Serial.print(s3_value);
+    Serial.print(",s4_value = ");
+    Serial.print(s4_value);
+    Serial.print(",s5_value = ");
+    Serial.println(s5_value);
+  
+    if((s1_value < S_WHITE) and (s2_value < S_WHITE) and (s3_value < S_WHITE) and (s4_value < S_WHITE) and (s5_value < S_WHITE)){
+      black_sensors = 0;
+    }
+    if(s1_value > S_WHITE){
+      s1 = 1;
+    }
+  
+    if(s2_value > S_WHITE){
+      s2 = 1;
+    }
+  
+    if(s3_value > S_WHITE){
+      s3 = 1;
+    }
+  
+    if(s4_value > S_WHITE){
+      s4 = 1;
+    }
+  
+    if(s5_value > S_WHITE){
+      s5 = 1;
+    }
+  
+    read_sensor = (s1 + (s2 * 2) + (s3 * 4) + (s4 * 8) + (s5 * 16));
+    black_sensors = read_sensor;
+    Serial.print(" black_sensors = ");
+    Serial.print(read_sensor);
+  /*
+    p1 = (long) s1_value * L_s1;
+    p2 = (long) s2_value * L_s2;
+    p3 = (long) s3_value * L_s3;
+    p4 = (long) s4_value * L_s4;
+    p5 = (long) s5_value * L_s5;
+  
+    sum = s1_value + s2_value + s3_value + s4_value + s5_value;
+  
+    psum = p1 + p2 + p3 + p4 + p5;
+  
+  
+    line = psum / sum;
+    line = line - 1000;
+  */
+    delay(500);
+    
   }
 }
