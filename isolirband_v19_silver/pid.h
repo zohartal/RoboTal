@@ -10,5 +10,5 @@ const int IDLE_DELAY = 0; // 20
 
 //const int BASIC_SPEED = 25;
 const int FACTOR_P = 40;
-const int FACTOR_I = 57;
+const int FACTOR_I = 1000;//57;
 const int FACTOR_D = 30;

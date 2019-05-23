@@ -49,10 +49,29 @@ const int S5 = A0;
 
 const uint8_t SENSOR_ARRAY[] = {S1 ,S2 ,S3 ,S4 ,S5 };
 
+const char TRACK_1_L[] = {'R'};
+const char TRACK_2_L[] = {'L'};
+
+const char TRACK_3_TEAM_A_TYPE_1_L[] = {'R'};
+const char TRACK_3_TEAM_A_TYPE_2_L[] = {'L','R','R','R'};
+const char TRACK_3_TEAM_A_TYPE_3_L[] = {'L','R','R','L'};
+const char TRACK_3_TEAM_B_TYPE_1_L[] = {'L','L'};
+const char TRACK_3_TEAM_B_TYPE_2_L[] = {'L','R','L','L','L'};
+const char TRACK_3_TEAM_B_TYPE_3_L[] = {'R','R','L','L'};
+
+const char TRACK_4_L[] = {'L','L','R','R','L','L'};
+const char TRACK_5_L[] = {'L','R'};
+
+//const String TRKN_STR_L[] = {"TRACK_1", "TRACK_2", "TRACK_3_TEAM_A_TYPE_1", "TRACK_3_TEAM_A_TYPE_2", "TRACK_3_TEAM_A_TYPE_3", "TRACK_3_TEAM_B_TYPE_1", "TRACK_3_TEAM_B_TYPE_2", "TRACK_3_TEAM_B_TYPE_3", "TRACK_4", "TRACK_5" };
+typedef enum trkn { TRACK_1, TRACK_2, TRACK_3_TEAM_A_TYPE_1, TRACK_3_TEAM_A_TYPE_2, TRACK_3_TEAM_A_TYPE_3, TRACK_3_TEAM_B_TYPE_1, TRACK_3_TEAM_B_TYPE_2, TRACK_3_TEAM_B_TYPE_3, TRACK_4, TRACK_5 } track_number_t;
+const int TRKN_MAX = 9;
+track_number_t track;
+
 //const int LED = 13;
 
 const int BUTTON = A5;
 const int BUTTON2 = 4;
+const int BUTTON3 = 7;
 #ifdef ARDUINO_NANO
   const int MOTOR_R_ENC_A = 3; // right motor
   const int MOTOR_L_ENC_A = 2; // left motor
@@ -74,6 +93,8 @@ const int MOTOR_B_DIR = 12; // right motor Motor B Direction
 void drive_motor ( motor_t motor_e , int spd);
 void stop_motor ( motor_t motor );
 int split();
+track_number_t update_track(track_number_t);
+char* track_num_to_str(track_number_t track);  
 
 void motor_r_interrupt();
 void motor_l_interrupt();
@@ -107,7 +128,8 @@ void setup() {
 
   pinMode( BUTTON, INPUT_PULLUP );
   pinMode (BUTTON2, INPUT_PULLUP );
-
+  pinMode (BUTTON3, INPUT_PULLUP );
+  
   attachInterrupt(digitalPinToInterrupt(MOTOR_R_ENC_A), motor_r_interrupt, RISING);
   attachInterrupt(digitalPinToInterrupt(MOTOR_L_ENC_A), motor_l_interrupt, RISING);
   
@@ -165,6 +187,17 @@ void setup() {
       delay(500);
       calibration();
     }
+
+    if(digitalRead (BUTTON3) == LOW){
+      track = update_track(track);
+      display.clearDisplay();
+      display.display();
+      display.setCursor(0, 0); 
+      display.println(track_num_to_str(track));
+      display.println(track);
+      display.display();
+      delay(500);
+    }
     
     //mySerial.println("Iso");
     /*if(mySerial.available() > 0){
@@ -189,7 +222,7 @@ void setup() {
   delay(500);
 
   mySerial.println("Button pressed");
-  sensor_monitor();
+  //sensor_monitor();
 }
 
 void loop() {
@@ -220,6 +253,9 @@ void loop() {
 
     else{
       final_line_sensor_value = spl - 3000;
+          
+      // test code 
+      turn_handler(spl);   
     }
     mySerial.print(" spl = ");
     mySerial.print(spl);
@@ -232,7 +268,7 @@ void loop() {
   }
   else {
     no_sensor_counter ++;
-    if(no_sensor_counter >= 50){
+    if(no_sensor_counter >= 100){
       stop_motor(RIGHT);
       stop_motor(LEFT);
 //  #ifdef SERIAL_ON
@@ -401,7 +437,7 @@ int read_line_sensor() {
   read_sensor = (s1 + (s2 * 2) + (s3 * 4) + (s4 * 8) + (s5 * 16));
   black_sensors = read_sensor;
   mySerial.print(" black_sensors = ");
-  mySerial.print(read_sensor);
+  mySerial.println(read_sensor);
 
   p1 = (long) s1_value * L_s1;
   p2 = (long) s2_value * L_s2;
@@ -507,6 +543,25 @@ int update_min_max (uint8_t sn, int n){
     }  
     return flag;
 }
+
+track_number_t update_track(track_number_t track_number){
+  if(track_number == TRKN_MAX){
+    return 0;
+  }
+  else{
+    return  ((int)track_number)+1 ;
+  }
+}
+
+char* track_num_to_str(track_number_t track) {
+
+    
+    return "Track 1";
+}
+
+
+
+
 
 int split (){
   int split_counter = 0;
@@ -668,7 +723,7 @@ int PID (int line_sensor_value, int Perror_old) {
   int Derror = (Perror - Perror_old);
   int f;
 
-  if( abs(Perror) < 300){
+  if( abs(Perror) < 1100){
     if( abs (Perror) < 20){
       Ierror = 0;
     }
@@ -840,6 +895,22 @@ void motor_l_interrupt() {
   }
 }
 
+void turn_handler(int spl) {    
+      stop_motor(RIGHT);
+      stop_motor(LEFT);
+      delay (10);
+      if (spl > 3000 ) {
+        final_line_sensor_value = 2000;
+        drive_motor(RIGHT, -20);
+        drive_motor(LEFT, 20);        
+      }
+      if (spl < 3000 ) {
+        final_line_sensor_value = -2000;        
+        drive_motor(RIGHT, 20);
+        drive_motor(LEFT, -20);
+      }
+      delay(90);
+}
 
 
 void sensor_monitor () { 
@@ -884,7 +955,7 @@ void sensor_monitor () {
     s5_value = constrain(s5_value,S_MIN_ARRAY[4],S_MAX_ARRAY[4]);
   
   
-    Serial.print(",s1_value = ");
+    Serial.print("before map: s1_value = ");
     Serial.print(s1_value);
     Serial.print(",s2_value = ");
     Serial.print(s2_value);
@@ -940,7 +1011,7 @@ void sensor_monitor () {
     read_sensor = (s1 + (s2 * 2) + (s3 * 4) + (s4 * 8) + (s5 * 16));
     black_sensors = read_sensor;
     Serial.print(" black_sensors = ");
-    Serial.print(read_sensor);
+    Serial.println(read_sensor);
   /*
     p1 = (long) s1_value * L_s1;
     p2 = (long) s2_value * L_s2;
