@@ -2,6 +2,7 @@
 #include "pid.h"
 #include "calibration.h"
 #include "display.h"
+#include "color_sensor.h"
 #include <SoftwareSerial.h>
 
 
@@ -28,6 +29,7 @@ const int RX = 9;// 14=miso on leonardo/micro
 
 SoftwareSerial mySerial(RX,TX); // RX, TX
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+//Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_700MS, TCS34725_GAIN_1X);
 
 const int LED = 13;
 
@@ -73,6 +75,7 @@ const int MOTOR_B_DIR = 12; // right motor Motor B Direction
 
 void drive_motor ( motor_t motor_e , int spd);
 void stop_motor ( motor_t motor );
+void read_color_sensor();
 int split();
 
 void motor_r_interrupt();
@@ -130,6 +133,16 @@ void setup() {
     display.println("start");
     display.display();
   #endif
+
+    if (tcs.begin()) {
+      display.clearDisplay();
+      display.setCursor(0,0);
+      display.println("Found sensor");
+      display.display();
+  } else {
+    Serial.println("No TCS34725 found ... check your connections");
+    while (1);
+  }
     
   stop_motor(RIGHT); 
   stop_motor(LEFT);
@@ -189,6 +202,10 @@ void setup() {
   delay(500);
 
   mySerial.println("Button pressed");
+
+  while(1){
+     read_color_sensor(); 
+  }
 
 }
 
@@ -301,7 +318,7 @@ void loop() {
   drive_motor(RIGHT, motor_R_speed);
   drive_motor(LEFT, motor_L_speed);
   
-
+  
 }
 
 int read_line_sensor() {
@@ -430,6 +447,56 @@ void init_line_sensor() {
 
 }
 
+void read_color_sensor(){
+  uint16_t r, g, b, c, colorTemp , lux;
+
+  const int CS_BLACK = 600;
+  const int CS_WHITE = 5000;
+  const int CS_YELLOW = 3500;
+  const int CS_GREEN = 1111;
+  const int CS_RED = 1145;
+
+
+  tcs.getRawData(&r, &g, &b, &c);
+  // colorTemp = tcs.calculateColorTemperature(r, g, b);
+  colorTemp = tcs.calculateColorTemperature_dn40(r, g, b, c);
+  lux = tcs.calculateLux(r, g, b);
+
+  if(b < CS_BLACK){
+      display.clearDisplay();
+      display.setCursor(0,0);
+      display.println("black");
+      display.display();
+    drive_motor(RIGHT,20);
+    drive_motor(LEFT,5);
+    return;
+  }
+  else if(c > CS_WHITE){
+      display.clearDisplay();
+      display.setCursor(0,0);
+      display.println("white");
+      display.display();
+    drive_motor(RIGHT,5);
+    drive_motor(LEFT,20);
+    return;
+  }
+  else if (c > CS_YELLOW){
+      display.clearDisplay();
+      display.setCursor(0,0);
+      display.println("-1");
+      display.display();
+    stop_motor(RIGHT);
+    stop_motor(LEFT);
+    return;
+  }
+  else if ((g > CS_GREEN)and (r < CS_RED)){
+    return;
+  }
+
+  else if (( r > CS_RED ) and (g < CS_GREEN)){
+    return;
+  }
+}
 
 void calibration(){
     int no_calibration_counter = 0;
