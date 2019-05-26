@@ -65,7 +65,7 @@ const char TRACK_5_L[] = {'L','R'};
 //const String TRKN_STR_L[] = {"TRACK_1", "TRACK_2", "TRACK_3_TEAM_A_TYPE_1", "TRACK_3_TEAM_A_TYPE_2", "TRACK_3_TEAM_A_TYPE_3", "TRACK_3_TEAM_B_TYPE_1", "TRACK_3_TEAM_B_TYPE_2", "TRACK_3_TEAM_B_TYPE_3", "TRACK_4", "TRACK_5" };
 typedef enum trkn { TRACK_1, TRACK_2, TRACK_3_TEAM_A_TYPE_1, TRACK_3_TEAM_A_TYPE_2, TRACK_3_TEAM_A_TYPE_3, TRACK_3_TEAM_B_TYPE_1, TRACK_3_TEAM_B_TYPE_2, TRACK_3_TEAM_B_TYPE_3, TRACK_4, TRACK_5 } track_number_t;
 const int TRKN_MAX = 9;
-track_number_t track;
+track_number_t track = TRACK_5;
 
 //const int LED = 13;
 
@@ -95,6 +95,8 @@ void stop_motor ( motor_t motor );
 int split();
 track_number_t update_track(track_number_t);
 char* track_num_to_str(track_number_t track);  
+void turn_handler(int);
+void track_3_start_handler();
 
 void motor_r_interrupt();
 void motor_l_interrupt();
@@ -105,6 +107,7 @@ int motor_r_cnt;
 unsigned long current_time = 0;
 unsigned long previous_time = 0;
 unsigned long time_difference = 0;
+unsigned long push_time;
 
 void setup() {
 
@@ -219,9 +222,36 @@ void setup() {
     }*/
     delay(1);
   }
+  push_time = millis();
   delay(500);
 
   mySerial.println("Button pressed");
+
+  switch(track){
+    case TRACK_1 :
+      turn_side [0] = 'R';
+      break;
+    case TRACK_2 :
+      turn_side [0] = 'L';
+      break;
+    case TRACK_3_TEAM_A_TYPE_1 :
+      turn_side [0] = 'R';
+      //turn_side [0] = 'L';
+      track_3_start_handler();
+      break;
+    case TRACK_3_TEAM_B_TYPE_1 :
+      //turn_side [0] = 'R';
+      turn_side [0] = 'L';
+      break;
+    case TRACK_3_TEAM_A_TYPE_2 :
+      turn_side [0] = 'R';
+      track_3_start_handler();
+      break;
+    case TRACK_3_TEAM_B_TYPE_2 :
+      turn_side [0] = 'L';
+      track_3_start_handler();
+  }
+  
   //sensor_monitor();
 }
 
@@ -231,6 +261,16 @@ void loop() {
   int pid;
   int motor_R_speed = 0;
   int motor_L_speed = 0;
+  int split_number = 0;
+  unsigned long time = millis();
+  unsigned long time_from_start = time - push_time;
+
+  if(track == TRACK_3_TEAM_B_TYPE_2){
+    if( time_from_start > 4500 ){
+      turn_side [0] = 'R'; 
+      digitalWrite(LED,HIGH);
+    }
+  }
 
   if(mySerial.available() > 0){
       char c = mySerial.read();
@@ -255,14 +295,15 @@ void loop() {
       final_line_sensor_value = spl - 3000;
           
       // test code 
-      turn_handler(spl);   
+      /*if((track == 'TRACK_3_TEAM_A_TYPE_1')or(track == TRACK_3_TEAM_B_TYPE_1)){
+        turn_handler(spl);   
+      }*/
     }
     mySerial.print(" spl = ");
     mySerial.print(spl);
     mySerial.print(" final_line_sensor_value = ");
     mySerial.print(final_line_sensor_value);
     mySerial.print(" time = ");
-    unsigned long time = millis();
     mySerial.print(time);
     no_sensor_counter = 0;
   }
@@ -338,6 +379,24 @@ void loop() {
   drive_motor(LEFT, motor_L_speed);
   
 
+}
+
+void track_3_start_handler(){
+  if (track == TRACK_3_TEAM_A_TYPE_1){
+    drive_motor(RIGHT, 20);
+    drive_motor(LEFT, 50);
+  }
+  if (track == TRACK_3_TEAM_A_TYPE_2){
+      drive_motor(RIGHT, 40);
+      drive_motor(LEFT, 40);
+  }
+  if (track == TRACK_3_TEAM_B_TYPE_2){
+      drive_motor(RIGHT, 20);
+      drive_motor(LEFT, 50);
+  }
+  delay(600);
+  stop_motor(RIGHT);
+  stop_motor(LEFT);
 }
 
 int read_line_sensor() {
@@ -553,165 +612,256 @@ track_number_t update_track(track_number_t track_number){
   }
 }
 
-char* track_num_to_str(track_number_t track) {
+char* track_num_to_str(track_number_t track_mode) {
+  switch(track_mode){
+    case 0 :
+    return "TRACK 1";
 
+    case 1 :
+    return "TRACK 2";
+
+    case 2 :
+    return "TRACK_3_TEAM_A_TYPE_1";
     
-    return "Track 1";
+    case 3 :
+    return "TRACK_3_TEAM_A_TYPE_2";
+    
+    case 4 :
+    return "TRACK_3_TEAM_A_TYPE_3";
+    
+    case 5 :
+    return "TRACK_3_TEAM_B_TYPE_1";
+    
+    case 6 :
+    return "TRACK_3_TEAM_B_TYPE_2";
+    
+    case 7 :
+    return "TRACK_3_TEAM_B_TYPE_3";
+
+    case 8 :
+    return "TRACK 4";
+
+    case 9 :
+    return "TRACK 5";
+  }
 }
-
-
-
-
 
 int split (){
   int split_counter = 0;
  // return -1;
+  if(split_counter > 0){
+    split_counter = 0;
+    mySerial.println(turn_side[split_counter]);
+  }
+ 
   switch(black_sensors){
     case 5:
 
-   /* case 7:
-      if(TURN_SIDE[split_counter] == 'L'){
-        return 1000;
+    case 7:
+      if((track == 'TRACK_1') or (track == 'TRACK_2') or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1)){
+        if(turn_side[split_counter] == 'L'){
+          return 1000;
+        }
+        else{
+          return 3000;
+        }
       }
       else{
-        return 3000;
+        break;
       }
-*/
     case 9:
-      if(TURN_SIDE[split_counter] == 'L'){
-      return 1000;
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
       }
       else{
         return 4000;
       }
     case 10:
-      if(TURN_SIDE[split_counter] == 'L'){
-      return 2000;
+      if(turn_side[split_counter] == 'L'){
+        return 2000;
+        split_counter ++;
       }
       else{
         return 4000;
+        split_counter ++;
       }
     case 11:
-      if(TURN_SIDE[split_counter] == 'L'){
-      return 1000;
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
+        split_counter ++;
       }
       else{
         return 4000;
+        split_counter ++;
       }
     case 13:
-      if(TURN_SIDE[split_counter] == 'L'){
-      return 1000;
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
+        split_counter ++;
       }
       else{
         return 4000;
+        split_counter ++;
       }
-  /*  case 14:
-      if(TURN_SIDE[split_counter] == 'L'){
-      return 2000;
+    case 14:
+      if((track == 'TRACK_1') or (track == 'TRACK_2') or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1)){
+        if(turn_side[split_counter] == 'L'){
+          return 2000;
+        }
+        else{
+          return 4000;
+        }
       }
       else{
-        return 4000;
+        break;
       }
     case 15:
-      if(TURN_SIDE[split_counter] == 'L'){
-      return 1000;
+      if((track == 'TRACK_1') or (track == 'TRACK_2') or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1)){
+        if(turn_side[split_counter] == 'L'){
+          return 1000;
+        }
+        else{
+          return 4000;
+        }
       }
       else{
-        return 4000;
-      }*/
+        break;
+      }
     case 17:
-      if(TURN_SIDE[split_counter] == 'L'){
-      return 1000;
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
+        split_counter ++;
       }
       else{
         return 5000;
+        split_counter ++;
       }
     case 18:
-      if(TURN_SIDE[split_counter] == 'L'){
-      return 2000;
+      if(turn_side[split_counter] == 'L'){
+        return 2000;
+        split_counter ++;
       }
       else{
         return 5000;
+        split_counter ++;
       }
     case 19:
-      if(TURN_SIDE[split_counter] == 'L'){
-      return 1000;
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
+        split_counter ++;
       }
       else{
         return 5000;
+        split_counter ++;
       }
     case 20:
-      if(TURN_SIDE[split_counter] == 'L'){
-      return 3000;
+      if(turn_side[split_counter] == 'L'){
+        return 3000;
+        split_counter ++;
       }
       else{
         return 5000;
+        split_counter ++;
       }
     case 21:
-      if(TURN_SIDE[split_counter] == 'L'){
-      return 1000;
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
+        split_counter ++;
       }
       else{
         return 5000;
+        split_counter ++;
       }
     case 22:
-      if(TURN_SIDE[split_counter] == 'L'){
-      return 2000;
+      if(turn_side[split_counter] == 'L'){
+        return 2000;
+        split_counter ++;
       }
       else{
         return 5000;
+        split_counter ++;
       }
     case 23:
-      
+      if((track == 'TRACK_1') or (track == 'TRACK_2') or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1)){
+      }
+      else{
+        break;
+      }
     case 25:
-      if(TURN_SIDE[split_counter] == 'L'){
-      return 1000;
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
+        split_counter ++;
       }
       else{
         return 5000;
+        split_counter ++;
       }
     case 26:
-      if(TURN_SIDE[split_counter] == 'L'){
-      return 2000;
+      if(turn_side[split_counter] == 'L'){
+        return 2000;
+        split_counter ++;
       }
       else{
         return 5000;
+        split_counter ++;
       }
     case 27:
-      if(TURN_SIDE[split_counter] == 'L'){
-      return 1000;
-      }
-      else{
-        return 5000;
-      }
-    /*case 28:
-      if(TURN_SIDE[split_counter] == 'L'){
-      return 3000;
-      }
-      else{
-        return 5000;
-      }
-    case 29:
-      if(TURN_SIDE[split_counter] == 'L'){
-      return 1000;
-      }
-      else{
-        return 5000;
-      }
-    case 30:
-      if(TURN_SIDE[split_counter] == 'L'){
-      return 2000;
-      }
-      else{
-        return 5000;
-      }
-    case 31:
-      if(TURN_SIDE[split_counter] == 'L'){
+      if(turn_side[split_counter] == 'L'){
         return 1000;
+        split_counter ++;
       }
       else{
         return 5000;
-      }*/
+        split_counter ++;
+      }
+      case 28:
+        if((track == 'TRACK_1') or (track == 'TRACK_2') or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1)){
+          if(turn_side[split_counter] == 'L'){
+            return 3000;
+          }
+          else{
+            return 5000;
+          }
+        }
+        else{
+          break;
+        }
+      case 29:
+        if((track == 'TRACK_1') or (track == 'TRACK_2') or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1)){
+          if(turn_side[split_counter] == 'L'){
+            return 1000;
+          }
+          else{
+            return 5000;
+          }
+        }
+        else{
+          break;
+        }
+      case 30:
+        if((track == 'TRACK_1') or (track == 'TRACK_2') or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1)){
+          if(turn_side[split_counter] == 'L'){
+            return 2000;
+          }
+          else{
+            return 5000;
+          }
+        }
+        else{
+          break;
+        }
+      case 31:
+        if((track == 'TRACK_1') or (track == 'TRACK_2') or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1)){
+          if(turn_side[split_counter] == 'L'){
+            return 1000;
+          }
+          else{
+            return 5000;
+          }
+        }
+        else{
+          break;
+        }
       default:
         return -1;
   }
@@ -895,21 +1045,27 @@ void motor_l_interrupt() {
   }
 }
 
-void turn_handler(int spl) {    
+void turn_handler(int spl) {   
+      mySerial.println("turn_handler()"); 
       stop_motor(RIGHT);
       stop_motor(LEFT);
-      delay (10);
+      delay (250);
       if (spl > 3000 ) {
         final_line_sensor_value = 2000;
-        drive_motor(RIGHT, -20);
-        drive_motor(LEFT, 20);        
+        drive_motor(RIGHT, -30);
+        drive_motor(LEFT, 30);        
       }
       if (spl < 3000 ) {
         final_line_sensor_value = -2000;        
-        drive_motor(RIGHT, 20);
-        drive_motor(LEFT, -20);
+        drive_motor(RIGHT, 30);
+        drive_motor(LEFT, -30);
       }
-      delay(90);
+      if (spl == 3000 ) {
+        final_line_sensor_value = 0;
+        drive_motor(RIGHT, 30);
+        drive_motor(LEFT, 30);
+      }
+      delay(250);
 }
 
 
