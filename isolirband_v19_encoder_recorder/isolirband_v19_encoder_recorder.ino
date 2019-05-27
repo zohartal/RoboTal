@@ -1,0 +1,1060 @@
+#include "line_sensor.h"
+#include "pid.h"
+#include "calibration.h"
+#include "display.h"
+#include <SoftwareSerial.h>
+//#include "sensor_monitor.c"
+
+//#include <arduino.h>
+//#define ARDUINO_MICRO
+//#define ARDUINO_NANO
+#ifndef ARDUINO_NANO
+  #define ARDUINO_LEONARDO
+#endif
+#ifdef ARDUINO_NANO
+  #ifdef ARDUINO_LEONARDO
+    ERROR!!!!!
+  #endif
+#endif
+  
+#define SERIAL_ON
+#define SCREEN
+#define MOTOR
+//#define PRINT_ENC
+
+//const int RX = 7;
+//const int TX = 4;
+const int TX = SCK;// 15=sck on leonardo/micro
+const int RX = MISO;// 14=miso on leonardo/micro
+
+SoftwareSerial mySerial(RX,TX); // RX, TX
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+const int LED = 13;
+
+const int BATT_PIN = A5;
+
+int Ierror;
+int Perror_old;
+unsigned long time;
+
+#ifdef ARDUINO_NANO
+  const int S1 = A6;
+#endif
+#ifdef ARDUINO_LEONARDO
+  const int S1 = A4;
+#endif
+const int S2 = A3;
+const int S3 = A2;
+const int S4 = A1;
+const int S5 = A0;
+
+
+const uint8_t SENSOR_ARRAY[] = {S1 ,S2 ,S3 ,S4 ,S5 };
+
+const char TRACK_1_L[] = {'R'};
+const char TRACK_2_L[] = {'L'};
+
+const char TRACK_3_TEAM_A_TYPE_1_L[] = {'R'};
+const char TRACK_3_TEAM_A_TYPE_2_L[] = {'L','R','R','R'};
+const char TRACK_3_TEAM_B_TYPE_1_L[] = {'L','L'};
+const char TRACK_3_TEAM_B_TYPE_2_L[] = {'L','R','L','L','L'};
+
+const char TRACK_4_L[] = {'L','L','R','R','L','L'};
+const char TRACK_5_L[] = {'L','R'};
+
+//const String TRKN_STR_L[] = {"TRACK_1", "TRACK_2", "TRACK_3_TEAM_A_TYPE_1", "TRACK_3_TEAM_A_TYPE_2", "TRACK_3_TEAM_A_TYPE_3", "TRACK_3_TEAM_B_TYPE_1", "TRACK_3_TEAM_B_TYPE_2", "TRACK_3_TEAM_B_TYPE_3", "TRACK_4", "TRACK_5" };
+typedef enum trkn { TRACK_1, TRACK_2, TRACK_3_TEAM_A_TYPE_1, TRACK_3_TEAM_A_TYPE_2, TRACK_3_TEAM_B_TYPE_1, TRACK_3_TEAM_B_TYPE_2, TRACK_4, TRACK_5 } track_number_t;
+const int TRKN_MAX = 7;
+track_number_t track = TRACK_5;
+
+//const int LED = 13;
+
+const int BUTTON = MOSI; //A5;
+const int BUTTON2 = 4;
+const int BUTTON3 = 7;
+#ifdef ARDUINO_NANO
+  const int MOTOR_R_ENC_A = 3; // right motor
+  const int MOTOR_L_ENC_A = 2; // left motor
+#endif
+#ifdef ARDUINO_LEONARDO
+  const int MOTOR_R_ENC_A = 0; // right motor
+  const int MOTOR_L_ENC_A = 1; // left motor
+#endif
+
+const int MOTOR_R_ENC_B = 8; // right motor
+const int MOTOR_L_ENC_B = 6; // left motor
+
+// functional connections
+const int MOTOR_A_PWM = 9; // left motor Motor B PWM Speed
+const int MOTOR_A_DIR = 10; // left motor Motor B Direction
+const int MOTOR_B_PWM = 11; // right motor Motor B PWM Speed
+const int MOTOR_B_DIR = 12; // right motor Motor B Direction
+
+
+float test_battary_level();
+
+void drive_motor ( motor_t motor_e , int spd);
+void stop_motor ( motor_t motor );
+int split();
+track_number_t update_track(track_number_t);
+char* track_num_to_str(track_number_t track);  
+void turn_handler(int);
+void track_3_start_handler();
+
+void motor_r_interrupt();
+void motor_l_interrupt();
+
+int motor_l_cnt;
+int motor_r_cnt;  
+
+unsigned long current_time = 0;
+unsigned long previous_time = 0;
+unsigned long time_difference = 0;
+unsigned long push_time;
+unsigned long time_flag;
+int max_speed = 100;
+
+void setup() {
+
+  int i;
+  int motor_l_cnt = 0;
+  int motor_r_cnt = 0;
+
+  Ierror = 0;
+  
+  pinMode( LED, OUTPUT );
+
+  pinMode( MOTOR_A_DIR, OUTPUT );
+  pinMode( MOTOR_A_PWM, OUTPUT );
+  pinMode( MOTOR_B_DIR, OUTPUT );
+  pinMode( MOTOR_B_PWM, OUTPUT );
+
+  pinMode( MOTOR_R_ENC_A, INPUT );
+  pinMode( MOTOR_R_ENC_B, INPUT );
+  pinMode( MOTOR_L_ENC_A, INPUT );
+  pinMode( MOTOR_L_ENC_B, INPUT );
+
+  pinMode( BUTTON, INPUT_PULLUP );
+  pinMode (BUTTON2, INPUT_PULLUP );
+  pinMode (BUTTON3, INPUT_PULLUP );
+  
+  attachInterrupt(digitalPinToInterrupt(MOTOR_R_ENC_A), motor_r_interrupt, RISING);
+  attachInterrupt(digitalPinToInterrupt(MOTOR_L_ENC_A), motor_l_interrupt, RISING);
+  
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3c)) { 
+    digitalWrite(LED,HIGH);
+    while(1){
+      delay(1);
+    }
+  }
+  
+  // set the data rate for the SoftwareSerial port
+  //mySerial.begin(9600);
+  mySerial.begin(38400);
+  mySerial.println("Isolirband 2019: Begin. Battery=");
+  float batt = test_battary_level();
+  mySerial.println(batt);
+  #ifdef SCREEN
+    display.clearDisplay();
+    display.display();
+    display.setTextColor(WHITE);
+    display.setCursor(0, 0); 
+    display.println("start. ");
+    display.print("Battery: ");
+    display.println(batt);
+    display.display();
+  #endif
+    
+  stop_motor(RIGHT); 
+  stop_motor(LEFT);
+
+  init_line_sensor();
+
+
+  while(digitalRead (BUTTON) == HIGH){
+    
+    if(digitalRead (BUTTON2) == LOW){
+      delay(500);
+      calibration();
+    }
+
+    if(digitalRead (BUTTON3) == LOW){
+      track = update_track(track);
+      display.clearDisplay();
+      display.display();
+      display.setCursor(0, 0); 
+      display.println(track_num_to_str(track));
+      display.println(track);
+      display.display();
+      delay(500);
+    }
+
+    delay(1);
+  }
+  push_time = millis();
+  delay(500);
+  motor_l_cnt = 0;
+  motor_r_cnt = 0;
+
+  mySerial.println("Button pressed");
+      
+  time_flag = push_time;
+  //sensor_monitor();
+}
+
+
+void loop() {
+//  int line_value = read_line_sensor();
+  int line_sensor_value;
+  int pid;
+  int motor_R_speed = 0;
+  int motor_L_speed = 0;
+  int split_number = 0;
+  unsigned long time = millis();
+  unsigned long time_from_start = time - push_time;
+  
+
+  if(mySerial.available() > 0){
+      char c = mySerial.read();
+      if (c == 'S'){
+        stop_motor(RIGHT);
+        stop_motor(LEFT);
+        mySerial.print("stopped by user");
+        while (1){
+          delay(1);
+        }
+      }
+  }
+    mySerial.print("t= ");
+    mySerial.print(time);
+    mySerial.print(", l= ");
+    mySerial.print(motor_l_cnt);
+
+
+    mySerial.print(", r= ");
+    mySerial.println(motor_r_cnt);
+    
+#ifdef PRINT_ENC
+  if (time - time_flag > 1000) {
+      display.clearDisplay();
+      display.setCursor(0, 0);
+      sprintf(string_for_display,"r: %d ",motor_r_cnt);
+      display.print(string_for_display);
+      sprintf(string_for_display,"l: %d ",motor_l_cnt);
+      display.println(string_for_display);
+      display.display();  
+  
+      time_flag = time;
+  }
+#endif
+}
+
+void track_3_start_handler(){
+  if (track == TRACK_3_TEAM_A_TYPE_1){
+    drive_motor(RIGHT, 20);
+    drive_motor(LEFT, 50);
+  }
+  if (track == TRACK_3_TEAM_A_TYPE_2){
+      drive_motor(RIGHT, 40);
+      drive_motor(LEFT, 40);
+  }
+  if (track == TRACK_3_TEAM_B_TYPE_2){
+      drive_motor(RIGHT, 20);
+      drive_motor(LEFT, 50);
+  }
+  delay(600);
+  stop_motor(RIGHT);
+  stop_motor(LEFT);
+}
+
+int read_line_sensor() {
+
+  long p1 = 0;
+  long p2 = 0;
+  long p3 = 0;
+  long p4 = 0;
+  long p5 = 0;
+
+  int s1 = 0;
+  int s2 = 0;
+  int s3 = 0;
+  int s4 = 0;
+  int s5 = 0;
+
+  int read_sensor;
+
+  int sum = 0;
+  long psum = 0;
+
+  int line = 0;
+
+  int s1_value = 0;
+  int s2_value = 0;
+  int s3_value = 0;
+  int s4_value = 0;
+  int s5_value = 0;
+
+  s1_value = analogRead(S1);
+  s2_value = analogRead(S2);
+  s3_value = analogRead(S3);
+  s4_value = analogRead(S4);
+  s5_value = analogRead(S5);
+
+  s1_value = constrain(s1_value,S_MIN_ARRAY[0],S_MAX_ARRAY[0]);
+  s2_value = constrain(s2_value,S_MIN_ARRAY[1],S_MAX_ARRAY[1]);
+  s3_value = constrain(s3_value,S_MIN_ARRAY[2],S_MAX_ARRAY[2]); 
+  s4_value = constrain(s4_value,S_MIN_ARRAY[3],S_MAX_ARRAY[3]);
+  s5_value = constrain(s5_value,S_MIN_ARRAY[4],S_MAX_ARRAY[4]);
+
+/*
+  mySerial.print(",s1_value = ");
+  mySerial.print(s1_value);
+  mySerial.print(",s2_value = ");
+  mySerial.print(s2_value);
+  mySerial.print(",s3_value = ");
+  mySerial.print(s3_value);
+  mySerial.print(",s4_value = ");
+  mySerial.print(s4_value);
+  mySerial.print(",s5_value = ");
+  mySerial.println(s5_value);
+*/
+
+  s1_value = map(s1_value,S_MIN_ARRAY[0],S_MAX_ARRAY[0],0,1000);
+  s2_value = map(s2_value,S_MIN_ARRAY[1],S_MAX_ARRAY[1],0,1000);
+  s3_value = map(s3_value,S_MIN_ARRAY[2],S_MAX_ARRAY[2],0,1000);
+  s4_value = map(s4_value,S_MIN_ARRAY[3],S_MAX_ARRAY[3],0,1000);
+  s5_value = map(s5_value,S_MIN_ARRAY[4],S_MAX_ARRAY[4],0,1000);
+  
+/*
+  mySerial.print("after map: s1_value = ");
+  mySerial.print(s1_value);
+  mySerial.print(",s2_value = ");
+  mySerial.print(s2_value);
+  mySerial.print(",s3_value = ");
+  mySerial.print(s3_value);
+  mySerial.print(",s4_value = ");
+  mySerial.print(s4_value);
+  mySerial.print(",s5_value = ");
+  mySerial.println(s5_value);
+*/
+  if((s1_value < S_WHITE) and (s2_value < S_WHITE) and (s3_value < S_WHITE) and (s4_value < S_WHITE) and (s5_value < S_WHITE)){
+    black_sensors = 0;
+    return -1;
+  }
+  if(s1_value > S_WHITE){
+    s1 = 1;
+  }
+
+  if(s2_value > S_WHITE){
+    s2 = 1;
+  }
+
+  if(s3_value > S_WHITE){
+    s3 = 1;
+  }
+
+  if(s4_value > S_WHITE){
+    s4 = 1;
+  }
+
+  if(s5_value > S_WHITE){
+    s5 = 1;
+  }
+
+  read_sensor = (s1 + (s2 * 2) + (s3 * 4) + (s4 * 8) + (s5 * 16));
+  black_sensors = read_sensor;
+  mySerial.print(" black_sensors = ");
+  mySerial.println(read_sensor);
+
+  p1 = (long) s1_value * L_s1;
+  p2 = (long) s2_value * L_s2;
+  p3 = (long) s3_value * L_s3;
+  p4 = (long) s4_value * L_s4;
+  p5 = (long) s5_value * L_s5;
+
+  sum = s1_value + s2_value + s3_value + s4_value + s5_value;
+
+  psum = p1 + p2 + p3 + p4 + p5;
+
+
+  line = psum / sum;
+  line = line - 1000;
+  
+  return line;
+}
+
+void init_line_sensor() {
+
+  pinMode(S1,INPUT);
+  pinMode(S2,INPUT);
+  pinMode(S3,INPUT);
+  pinMode(S4,INPUT);
+  pinMode(S5,INPUT);
+
+}
+
+
+void calibration(){
+    int no_calibration_counter = 0;
+    digitalWrite(LED , HIGH);
+    mySerial.println("calibration");
+    while(no_calibration_counter < 500){
+      for(int i = 0; i < 5; i++){      
+        int flag = update_min_max (SENSOR_ARRAY[i] , i);       
+        if(flag == 0){
+          no_calibration_counter = 0;
+          mySerial.print(i);
+          mySerial.println ("calibrated");
+        
+        }    
+        else{
+          no_calibration_counter++;
+        }  
+      
+        if (flag == 0) {
+        }     
+      }
+    }
+    delay(1000);
+    digitalWrite(LED , LOW);
+
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    
+    display.print ("s1: ");
+    sprintf(string_for_display,"%03d ",S_MIN_ARRAY[0]);
+    display.print(string_for_display);
+    sprintf(string_for_display,"%03d ",S_MAX_ARRAY[0]);
+    display.println(string_for_display);
+    
+    display.print ("s2: ");
+    sprintf(string_for_display,"%03d ",S_MIN_ARRAY[1]);
+    display.print(string_for_display);
+    sprintf(string_for_display,"%03d ",S_MAX_ARRAY[1]);
+    display.println(string_for_display);
+    
+    display.print ("s3: ");
+    sprintf(string_for_display,"%03d ",S_MIN_ARRAY[2]);
+    display.print(string_for_display);
+    sprintf(string_for_display,"%03d ",S_MAX_ARRAY[2]);
+    display.println(string_for_display);
+    
+    display.print ("s4: ");
+    sprintf(string_for_display,"%03d ",S_MIN_ARRAY[3]);
+    display.print(string_for_display);
+    sprintf(string_for_display,"%03d ",S_MAX_ARRAY[3]);
+    display.println(string_for_display);
+    
+    display.print ("s5: ");
+    sprintf(string_for_display,"%03d ",S_MIN_ARRAY[4]);
+    display.print(string_for_display);
+    sprintf(string_for_display,"%03d ",S_MAX_ARRAY[4]);
+    display.println(string_for_display);
+    
+    display.display();
+
+    mySerial.print("calibration done");
+}
+
+int update_min_max (uint8_t sn, int n){ 
+  int s;
+  int flag = -1;
+    s = analogRead (sn);
+    if (s > S_MAX_ARRAY[n]){
+      S_MAX_ARRAY[n] = s;
+      flag = 0;
+    }
+    if (s < S_MIN_ARRAY[n]){
+      S_MIN_ARRAY[n] = s;
+      flag = 0;
+    }  
+    return flag;
+}
+
+track_number_t update_track(track_number_t track_number){
+  if(track_number == TRKN_MAX){
+    return 0;
+  }
+  else{
+    return  ((int)track_number)+1 ;
+  }
+}
+
+char* track_num_to_str(track_number_t track_mode) {
+  switch(track_mode){
+    case 0 :
+    return "TRACK 1";
+
+    case 1 :
+    return "TRACK 2";
+
+    case 2 :
+    return "TRACK_3_TEAM_A_TYPE_1";
+    
+    case 3 :
+    return "TRACK_3_TEAM_A_TYPE_2";
+    
+    case 4 :
+    return "TRACK_3_TEAM_B_TYPE_1";
+    
+    case 5 :
+    return "TRACK_3_TEAM_B_TYPE_2";
+
+    case 6 :
+    return "TRACK 4";
+
+    case 7 :
+    return "TRACK 5";
+  }
+}
+
+int split (){
+  int split_counter = 0;
+ // return -1;
+  if(split_counter > 0){
+    split_counter = 0;
+    mySerial.println(turn_side[split_counter]);
+  }
+ 
+  switch(black_sensors){
+    case 5:
+
+    case 7:
+      if((track == 'TRACK_1') or (track == 'TRACK_2') or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1)){
+        if(turn_side[split_counter] == 'L'){
+          return 1000;
+        }
+        else{
+          return 3000;
+        }
+      }
+      else{
+        break;
+      }
+    case 9:
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
+      }
+      else{
+        return 4000;
+      }
+    case 10:
+      if(turn_side[split_counter] == 'L'){
+        return 2000;
+        split_counter ++;
+      }
+      else{
+        return 4000;
+        split_counter ++;
+      }
+    case 11:
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
+        split_counter ++;
+      }
+      else{
+        return 4000;
+        split_counter ++;
+      }
+    case 13:
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
+        split_counter ++;
+      }
+      else{
+        return 4000;
+        split_counter ++;
+      }
+    case 14:
+      if((track == 'TRACK_1') or (track == 'TRACK_2') or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1)){
+        if(turn_side[split_counter] == 'L'){
+          return 2000;
+        }
+        else{
+          return 4000;
+        }
+      }
+      else{
+        break;
+      }
+    case 15:
+      if((track == 'TRACK_1') or (track == 'TRACK_2') or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1)){
+        if(turn_side[split_counter] == 'L'){
+          return 1000;
+        }
+        else{
+          return 4000;
+        }
+      }
+      else{
+        break;
+      }
+    case 17:
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
+        split_counter ++;
+      }
+      else{
+        return 5000;
+        split_counter ++;
+      }
+    case 18:
+      if(turn_side[split_counter] == 'L'){
+        return 2000;
+        split_counter ++;
+      }
+      else{
+        return 5000;
+        split_counter ++;
+      }
+    case 19:
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
+        split_counter ++;
+      }
+      else{
+        return 5000;
+        split_counter ++;
+      }
+    case 20:
+      if(turn_side[split_counter] == 'L'){
+        return 3000;
+        split_counter ++;
+      }
+      else{
+        return 5000;
+        split_counter ++;
+      }
+    case 21:
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
+        split_counter ++;
+      }
+      else{
+        return 5000;
+        split_counter ++;
+      }
+    case 22:
+      if(turn_side[split_counter] == 'L'){
+        return 2000;
+        split_counter ++;
+      }
+      else{
+        return 5000;
+        split_counter ++;
+      }
+    case 23:
+      if((track == 'TRACK_1') or (track == 'TRACK_2') or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1)){
+      }
+      else{
+        break;
+      }
+    case 25:
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
+        split_counter ++;
+      }
+      else{
+        return 5000;
+        split_counter ++;
+      }
+    case 26:
+      if(turn_side[split_counter] == 'L'){
+        return 2000;
+        split_counter ++;
+      }
+      else{
+        return 5000;
+        split_counter ++;
+      }
+    case 27:
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
+        split_counter ++;
+      }
+      else{
+        return 5000;
+        split_counter ++;
+      }
+      case 28:
+        if((track == 'TRACK_1') or (track == 'TRACK_2') or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1)){
+          if(turn_side[split_counter] == 'L'){
+            return 3000;
+          }
+          else{
+            return 5000;
+          }
+        }
+        else{
+          break;
+        }
+      case 29:
+        if((track == 'TRACK_1') or (track == 'TRACK_2') or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1)){
+          if(turn_side[split_counter] == 'L'){
+            return 1000;
+          }
+          else{
+            return 5000;
+          }
+        }
+        else{
+          break;
+        }
+      case 30:
+        if((track == 'TRACK_1') or (track == 'TRACK_2') or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1)){
+          if(turn_side[split_counter] == 'L'){
+            return 2000;
+          }
+          else{
+            return 5000;
+          }
+        }
+        else{
+          break;
+        }
+      case 31:
+        if((track == 'TRACK_1') or (track == 'TRACK_2') or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1)){
+          if(turn_side[split_counter] == 'L'){
+            return 1000;
+          }
+          else{
+            return 5000;
+          }
+        }
+        else{
+          break;
+        }
+      default:
+        return -1;
+  }
+}
+
+
+int PID (int line_sensor_value, int Perror_old) {
+  int Perror = line_sensor_value;
+  int Derror = (Perror - Perror_old);
+  int f;
+
+  if( abs(Perror) < 1100){
+    if( abs (Perror) < 20){
+      Ierror = 0;
+    }
+    else{
+      Ierror += Perror;
+    }
+  }
+  else{
+    Ierror = 0;
+  }
+//      max 50,              max 30              max 10
+  f = Perror / FACTOR_P + Derror / FACTOR_D + Ierror / FACTOR_I;
+  mySerial.print(", P = ");
+  mySerial.print(Perror);
+  mySerial.print(", I = ");
+  mySerial.print(Ierror);
+  mySerial.print(", D = ");
+  mySerial.print(Derror);
+  mySerial.print(", F = ");
+  mySerial.print(f);
+  f = constrain(f,-50,50);
+  return f;
+
+}
+
+void drive_motor ( motor_t motor_e , int spd) 
+{
+  int motor_speed;
+  motor_dir_t dir;
+
+  constrain(spd,-100,100);
+  int speed = abs(spd);
+
+  if(spd > 0){
+    dir = F;
+  }
+  else if (spd < 0) {
+    dir = B;
+  }
+  else {
+    stop_motor(motor_e);
+    return;
+  }
+#ifdef MOTOR
+//---------------------------------//
+// MOTOR_A = LEFT, MOTOR_B = RIGHT //
+//---------------------------------//
+  if(dir == B){
+    if(motor_e == RIGHT){
+       motor_speed = map(speed,0,100,50,255);
+       #ifdef SERIAL_ON 
+        //  mySerial.print(", ");
+        //  mySerial.println("r-b");
+       #endif
+       digitalWrite( MOTOR_B_DIR, LOW );
+       analogWrite( MOTOR_B_PWM, motor_speed );
+    }
+    else{
+      motor_speed = map(speed,0,100,50,255);;
+      #ifdef SERIAL_ON 
+        // mySerial.print(", ");
+        // mySerial.println("l-b");
+      #endif
+      digitalWrite( MOTOR_A_DIR, LOW );
+      analogWrite( MOTOR_A_PWM, motor_speed );
+      #ifdef SERIAL_ON
+      //  mySerial.println(motor_speed);
+      #endif 
+    }
+  }
+  else{
+    if(motor_e == RIGHT){
+      motor_speed = map(speed,0,100,200,0);;
+      #ifdef SERIAL_ON 
+        // mySerial.print(", ");
+        // mySerial.println("r-f");
+      #endif
+      digitalWrite( MOTOR_B_DIR, HIGH ); 
+      analogWrite( MOTOR_B_PWM, motor_speed ); 
+    }
+    else{
+     motor_speed = map(speed,0,100,200,0);;
+      #ifdef SERIAL_ON 
+        // mySerial.print(", ");
+        // mySerial.println("l-f");
+      #endif
+      digitalWrite( MOTOR_A_DIR, HIGH );
+      analogWrite( MOTOR_A_PWM, motor_speed );
+    }
+  }
+   #endif 
+}
+/*
+// This function is compatible to the 2019 robot (pololu motors)
+void drive_motor ( motor_t motor_e, int spd) {
+  
+  int motor_speed;
+  spd = constrain(spd, 0, 100);
+  motor_speed = map(spd,0,100,0,255);
+  
+  switch (motor) {
+      case LEFT:
+        switch (dir) {
+          case BACKWARD:
+            digitalWrite( MOTOR_A_DIR, LOW ); // direction = forward
+            analogWrite( MOTOR_A_PWM, motor_speed ); // PWM speed      
+          break;
+          
+          case FORWARD:
+            digitalWrite( MOTOR_A_DIR, HIGH ); // direction = backward
+            analogWrite( MOTOR_A_PWM, 255-motor_speed ); // PWM speed              
+          break;        
+        }    
+        break;
+        
+      case RIGHT:
+        switch (dir) {
+          case BACKWARD:
+            digitalWrite( MOTOR_B_DIR, LOW ); // direction = forward
+            analogWrite( MOTOR_B_PWM, motor_speed ); // PWM speed
+          break;
+          
+          case FORWARD:
+            digitalWrite( MOTOR_B_DIR, HIGH ); // direction = backward
+            analogWrite( MOTOR_B_PWM, 255-motor_speed ); // PWM speed
+          break;        
+        }    
+        break;  
+    }            
+}
+*/
+
+void stop_motor ( motor_t motor ) 
+{
+switch (motor) {
+//---------------------------------//
+// MOTOR_A = LEFT, MOTOR_B = RIGHT //
+//---------------------------------//
+    case RIGHT:
+      // MOTOR B STOP
+      digitalWrite( MOTOR_B_DIR, HIGH );
+      digitalWrite( MOTOR_B_PWM, HIGH );     
+      break;
+    case LEFT:
+      // MOTOR A STOP
+      digitalWrite( MOTOR_A_DIR, HIGH );
+      digitalWrite( MOTOR_A_PWM, HIGH ); 
+      break;
+  }   
+}
+
+void motor_r_interrupt() {
+  int b = digitalRead(MOTOR_R_ENC_B);
+  if (b == HIGH) {
+    motor_r_cnt++;
+  }
+  else {
+    motor_r_cnt--;
+  }
+}
+
+void motor_l_interrupt() {
+  int b = digitalRead(MOTOR_L_ENC_B);
+  if (b == HIGH) {
+    motor_l_cnt--;
+  }
+  else {
+    motor_l_cnt++;
+  }
+}
+
+void turn_handler(int spl) {   
+      mySerial.println("turn_handler()"); 
+      stop_motor(RIGHT);
+      stop_motor(LEFT);
+      delay (250);
+      if (spl > 3000 ) {
+        final_line_sensor_value = 2000;
+        drive_motor(RIGHT, -30);
+        drive_motor(LEFT, 30);        
+      }
+      if (spl < 3000 ) {
+        final_line_sensor_value = -2000;        
+        drive_motor(RIGHT, 30);
+        drive_motor(LEFT, -30);
+      }
+      if (spl == 3000 ) {
+        final_line_sensor_value = 0;
+        drive_motor(RIGHT, 30);
+        drive_motor(LEFT, 30);
+      }
+      delay(250);
+}
+
+
+void sensor_monitor () { 
+ Serial.begin(9600);
+
+  while (1) {
+    long p1 = 0;
+    long p2 = 0;
+    long p3 = 0;
+    long p4 = 0;
+    long p5 = 0;
+  
+    int s1 = 0;
+    int s2 = 0;
+    int s3 = 0;
+    int s4 = 0;
+    int s5 = 0;
+  
+    int read_sensor;
+  
+    int sum = 0;
+    long psum = 0;
+  
+    int line = 0;
+  
+    int s1_value = 0;
+    int s2_value = 0;
+    int s3_value = 0;
+    int s4_value = 0;
+    int s5_value = 0;
+  
+    s1_value = analogRead(S1);
+    s2_value = analogRead(S2);
+    s3_value = analogRead(S3);
+    s4_value = analogRead(S4);
+    s5_value = analogRead(S5);
+  
+    s1_value = constrain(s1_value,S_MIN_ARRAY[0],S_MAX_ARRAY[0]);
+    s2_value = constrain(s2_value,S_MIN_ARRAY[1],S_MAX_ARRAY[1]);
+    s3_value = constrain(s3_value,S_MIN_ARRAY[2],S_MAX_ARRAY[2]); 
+    s4_value = constrain(s4_value,S_MIN_ARRAY[3],S_MAX_ARRAY[3]);
+    s5_value = constrain(s5_value,S_MIN_ARRAY[4],S_MAX_ARRAY[4]);
+  
+  
+    Serial.print("before map: s1_value = ");
+    Serial.print(s1_value);
+    Serial.print(",s2_value = ");
+    Serial.print(s2_value);
+    Serial.print(",s3_value = ");
+    Serial.print(s3_value);
+    Serial.print(",s4_value = ");
+    Serial.print(s4_value);
+    Serial.print(",s5_value = ");
+    Serial.println(s5_value);
+  
+  
+    s1_value = map(s1_value,S_MIN_ARRAY[0],S_MAX_ARRAY[0],0,1000);
+    s2_value = map(s2_value,S_MIN_ARRAY[1],S_MAX_ARRAY[1],0,1000);
+    s3_value = map(s3_value,S_MIN_ARRAY[2],S_MAX_ARRAY[2],0,1000);
+    s4_value = map(s4_value,S_MIN_ARRAY[3],S_MAX_ARRAY[3],0,1000);
+    s5_value = map(s5_value,S_MIN_ARRAY[4],S_MAX_ARRAY[4],0,1000);
+    
+  
+    Serial.print("after map: s1_value = ");
+    Serial.print(s1_value);
+    Serial.print(",s2_value = ");
+    Serial.print(s2_value);
+    Serial.print(",s3_value = ");
+    Serial.print(s3_value);
+    Serial.print(",s4_value = ");
+    Serial.print(s4_value);
+    Serial.print(",s5_value = ");
+    Serial.println(s5_value);
+  
+    if((s1_value < S_WHITE) and (s2_value < S_WHITE) and (s3_value < S_WHITE) and (s4_value < S_WHITE) and (s5_value < S_WHITE)){
+      black_sensors = 0;
+    }
+    if(s1_value > S_WHITE){
+      s1 = 1;
+    }
+  
+    if(s2_value > S_WHITE){
+      s2 = 1;
+    }
+  
+    if(s3_value > S_WHITE){
+      s3 = 1;
+    }
+  
+    if(s4_value > S_WHITE){
+      s4 = 1;
+    }
+  
+    if(s5_value > S_WHITE){
+      s5 = 1;
+    }
+  
+    read_sensor = (s1 + (s2 * 2) + (s3 * 4) + (s4 * 8) + (s5 * 16));
+    black_sensors = read_sensor;
+    Serial.print(" black_sensors = ");
+    Serial.println(read_sensor);
+  /*
+    p1 = (long) s1_value * L_s1;
+    p2 = (long) s2_value * L_s2;
+    p3 = (long) s3_value * L_s3;
+    p4 = (long) s4_value * L_s4;
+    p5 = (long) s5_value * L_s5;
+  
+    sum = s1_value + s2_value + s3_value + s4_value + s5_value;
+  
+    psum = p1 + p2 + p3 + p4 + p5;
+  
+  
+    line = psum / sum;
+    line = line - 1000;
+  */
+    delay(500);
+    
+  }
+}
+
+
+float test_battary_level() {
+  float res;
+  int batt_level = analogRead(BATT_PIN);
+  res = (float) batt_level * 5 /1024;
+  return res;
+}
