@@ -9,4 +9,4 @@
 #define OLED_RESET     4 // Reset pin # (or -1 if sharing Arduino reset pin)
 
 
-char string_for_display[4];
+//char string_for_display[4];
