@@ -112,6 +112,7 @@ void encoder_playback(int* left_array, int* right_array,int max_index);
 
 void encoder_follower (int target_r_cnt, int target_l_cnt, int basic_speed);
 bool stop_condition (stage_number_t curernt_stage);
+void stage_6 ();
 
 int motor_l_cnt;
 int motor_r_cnt;  
@@ -200,6 +201,9 @@ void setup() {
     
     delay(1);
   }
+  stage_6();
+ // while(1){
+ // }
   push_time = millis();
   delay(500);
   motor_l_cnt = 0;
@@ -252,8 +256,8 @@ void setup() {
  // encoder_follower (300,400,40);
  // delay(1000);
  // encoder_follower (500,200,35);
-  while(1){
-  }
+  //while(1){
+  //}
 }
 
 
@@ -287,12 +291,12 @@ void track_5 (){
   delay(200);
   drive_motor(RIGHT,25);
   drive_motor(LEFT,25);
-  delay(200);
+  delay(150);
   stop_motor(RIGHT);
   stop_motor(LEFT);
   delay(200);
   drive_motor(RIGHT,50);
-  delay(1100);
+  delay(1300);
   stop_motor(RIGHT);
   stop_motor(LEFT);
   delay(200);
@@ -306,15 +310,25 @@ void track_5 (){
   stop_motor(RIGHT);
   stop_motor(LEFT);
   delay(200);
-  stage = T_5_STAGE_4;
-  drive_motor(RIGHT,40);
-  drive_motor(LEFT,-40);
-  delay(800);
-  while(stop_condition(stage) == false){
-    read_line_sensor();
-    handler();
+  while(read_line_sensor() != -1){
     digitalWrite(LED,LOW);
+    drive_motor(RIGHT,30);
+    drive_motor(LEFT,30);
   }
+  stage = T_5_STAGE_4;
+  drive_motor(RIGHT,-40);
+  drive_motor(LEFT,-40);
+  delay(600);
+  encoder_follower(300,0,50);
+  stop_motor(RIGHT);
+  stop_motor(LEFT);
+  delay(200);
+  //while(stop_condition(stage) == false){
+   // read_line_sensor();
+   // handler();
+    encoder_follower(360,360,35);
+    digitalWrite(LED,HIGH);
+//  }
   stop_motor(RIGHT);
   stop_motor(LEFT);
   delay(200);
@@ -323,10 +337,87 @@ void track_5 (){
   motor_l_cnt = 0;
   while(stop_condition (stage) == false){
     line_folower();
-    digitalWrite(LED,HIGH);
+    digitalWrite(LED,LOW);
   }
   stop_motor(RIGHT);
   stop_motor(LEFT);
+}
+
+void stage_6 (){
+  int turn_num = 0;
+  turn_side[0] = 'L';
+  while(turn_num < 6){
+    TURN_FACTOR = 1200;
+    if(turn_num == 3){
+      turn_side[0] = 'R';
+    }
+    if(turn_num == 4){
+      turn_side[0] = 'L';
+    }
+    if(turn_num == 5){
+      turn_side[0] = 'R';
+    }
+    if(turn_num == 6){
+      turn_side[0] = 'L';
+    }
+  }
+  /*while(read_line_sensor() != -1){
+    digitalWrite(LED,HIGH);
+    //drive_motor(RIGHT,30);
+    //drive_motor(LEFT,30);
+    line_folower();
+  }
+  drive_motor(RIGHT,60);
+  stop_motor(LEFT);
+  delay(200);
+  stop_motor(RIGHT);
+  stop_motor(LEFT);
+  delay(100);
+  while(read_line_sensor() != -1){
+    digitalWrite(LED,LOW);
+    //drive_motor(RIGHT,30);
+    //drive_motor(LEFT,30);
+    line_folower();
+  }
+  stop_motor(RIGHT);
+  stop_motor(LEFT);
+  delay(100);
+  drive_motor(RIGHT,-25);
+  drive_motor(LEFT,-40);
+  delay(200);
+  while(read_line_sensor() != -1){
+    digitalWrite(LED,HIGH);
+    //drive_motor(RIGHT,-30);
+    //drive_motor(LEFT,-30);
+    line_folower();
+  }
+  stop_motor(RIGHT);
+  stop_motor(LEFT);
+  delay(100);
+  drive_motor(LEFT,30);
+  delay(200);
+  while(read_line_sensor() != -1){
+    digitalWrite(LED,LOW);
+    //drive_motor(RIGHT,30);
+    //drive_motor(LEFT,30);
+    line_folower();
+  }
+  stop_motor(RIGHT);
+  stop_motor(LEFT);
+  delay(100);
+  drive_motor(LEFT,-30);
+  delay(200);
+  while(read_line_sensor() != -1){
+    digitalWrite(LED,HIGH);
+    //drive_motor(RIGHT,-30);
+    //drive_motor(LEFT,-30);
+    line_folower();
+  }
+  stop_motor(RIGHT);
+  stop_motor(LEFT);
+  delay(100);
+  drive_motor(LEFT,30);
+  delay(600);*/
 }
 
 void line_folower(){
@@ -458,7 +549,7 @@ void encoder_follower (int target_r_cnt, int target_l_cnt, int basic_speed) {
   int r_cnt = motor_r_cnt;
   int r_diff = target_r_cnt - (motor_r_cnt - r_cnt);
   int l_diff = target_l_cnt - (motor_l_cnt - l_cnt);
-  int drive_factor = 1;
+  int drive_factor = 10;
   
   stop_motor(RIGHT);
   stop_motor(LEFT);
@@ -474,7 +565,7 @@ void encoder_follower (int target_r_cnt, int target_l_cnt, int basic_speed) {
       }
       
       else{
-        drive_motor(RIGHT,(r_diff - l_diff) / drive_factor);
+        drive_motor(RIGHT,basic_speed + (r_diff - l_diff) / drive_factor);
       }
       
     }
@@ -489,7 +580,7 @@ void encoder_follower (int target_r_cnt, int target_l_cnt, int basic_speed) {
       }
     
       else{
-        drive_motor(LEFT,(l_diff - r_diff) / drive_factor);
+        drive_motor(LEFT,basic_speed + (l_diff - r_diff) / drive_factor);
       }
       
     }
@@ -506,8 +597,8 @@ void encoder_follower (int target_r_cnt, int target_l_cnt, int basic_speed) {
 
 // need to implement - per stage, set stop condition (based on encoders, sensors etc.)
 bool stop_condition (stage_number_t curernt_stage) {
-  const int r_target = 1700;
-  const int l_target = 1900;
+  const int r_target = 2000;
+  const int l_target = 2000;
   const int r_target_2 = 2500;
   const int l_target_2 = 2700;
   switch(curernt_stage){
