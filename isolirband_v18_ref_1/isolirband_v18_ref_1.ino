@@ -1,9 +1,10 @@
 #include "line_sensor.h"
 #include "pid.h"
 #include "calibration.h"
-#include "display.h"
-#include "color_sensor.h"
+//#include "display.h"
+//#include "color_sensor.h"
 #include <SoftwareSerial.h>
+#include <Servo.h>
 
 
 //#include <arduino.h>
@@ -19,19 +20,32 @@
 #endif
   
 #define SERIAL_ON
-#define SCREEN
+//#define SCREEN
 #define MOTOR
+//#define COLOR_SENSOR
 
 //const int RX = 7;
 //const int TX = 4;
 const int TX = 8;// 15=sck on leonardo/micro
 const int RX = 9;// 14=miso on leonardo/micro
 
+Servo myservo;  // create servo object to control a servo
+// twelve servo objects can be created on most boards
+
+int pos = 0;    // variable to store the servo position
+
+
 SoftwareSerial mySerial(RX,TX); // RX, TX
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-//Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_700MS, TCS34725_GAIN_1X);
+#ifdef SCREEN
+  Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+#endif
+#ifdef COLOR_SENSOR
+Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_700MS, TCS34725_GAIN_1X);
+#endif
 
 const int LED = 13;
+const int SERVO = 5;
+const int SIDE_SENSOR = 6;
 
 int Ierror;
 int Perror_old;
@@ -68,8 +82,8 @@ const int MOTOR_R_ENC_B = 8; // right motor
 const int MOTOR_L_ENC_B = 6; // left motor
 
 // functional connections
-const int MOTOR_A_PWM = 9; // left motor Motor B PWM Speed
-const int MOTOR_A_DIR = 10; // left motor Motor B Direction
+const int MOTOR_A_PWM = 10; // left motor Motor B PWM Speed
+const int MOTOR_A_DIR = 9; // left motor Motor B Direction
 const int MOTOR_B_PWM = 11; // right motor Motor B PWM Speed
 const int MOTOR_B_DIR = 12; // right motor Motor B Direction
 
@@ -77,6 +91,7 @@ void drive_motor ( motor_t motor_e , int spd);
 void stop_motor ( motor_t motor );
 void read_color_sensor();
 int split();
+void drop_egg();
 
 void motor_r_interrupt();
 void motor_l_interrupt();
@@ -89,7 +104,7 @@ unsigned long previous_time = 0;
 unsigned long time_difference = 0;
 
 void setup() {
-
+  
   int i;
   int motor_l_cnt = 0;
   int motor_r_cnt = 0;
@@ -111,15 +126,28 @@ void setup() {
   pinMode( BUTTON, INPUT_PULLUP );
   pinMode (BUTTON2, INPUT_PULLUP );
 
+  myservo.attach(SERVO);  // attaches the servo on pin 5 to the servo object
+  
+  stop_motor(RIGHT); 
+  stop_motor(LEFT);
+  for (i=0;i<5; i++) {
+    digitalWrite(LED,HIGH);
+    delay(500);
+    digitalWrite(LED,LOW);    
+    delay(500);
+  }
+  digitalWrite(LED,LOW);
+
 //  attachInterrupt(digitalPinToInterrupt(MOTOR_R_ENC_A), motor_r_interrupt, RISING);
 //  attachInterrupt(digitalPinToInterrupt(MOTOR_L_ENC_A), motor_l_interrupt, RISING);
+
   
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3c)) { 
-    digitalWrite(LED,HIGH);
-    while(1){
-      delay(1);
-    }
-  }
+//  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3c)) { 
+//    digitalWrite(LED,HIGH);
+//    while(1){
+//      delay(1);
+//    }
+//  }
   
   // set the data rate for the SoftwareSerial port
   //mySerial.begin(9600);
@@ -134,6 +162,7 @@ void setup() {
     display.display();
   #endif
 
+  #ifdef COLOR_SENSOR
     if (tcs.begin()) {
       display.clearDisplay();
       display.setCursor(0,0);
@@ -143,6 +172,7 @@ void setup() {
     Serial.println("No TCS34725 found ... check your connections");
     while (1);
   }
+  #endif
     
   stop_motor(RIGHT); 
   stop_motor(LEFT);
@@ -172,6 +202,8 @@ void setup() {
 //    while(1){
 //    delay(1);
    // }
+   myservo.write(180);
+   
   while(digitalRead (BUTTON) == HIGH){
     
     if(digitalRead (BUTTON2) == LOW){
@@ -202,10 +234,20 @@ void setup() {
   delay(500);
 
   mySerial.println("Button pressed");
-
+//  digitalWrite( MOTOR_A_DIR, LOW ); // direction = forward
+//  for (i=0;i<250;i+=10){
+//    
+//  
+//  analogWrite( MOTOR_A_PWM, i ); // PWM speed
+//  delay(500);
+//  stop_motor(LEFT);
+//  delay(500);
+//  }
+  drop_zone();
   while(1){
-     read_color_sensor(); 
-  }
+//     read_color_sensor(); 
+  
+ }
 
 }
 
@@ -447,6 +489,7 @@ void init_line_sensor() {
 
 }
 
+
 void read_color_sensor(){
   uint16_t r, g, b, c, colorTemp , lux;
 
@@ -455,7 +498,7 @@ void read_color_sensor(){
   const int CS_YELLOW = 3500;
   const int CS_GREEN = 1111;
   const int CS_RED = 1145;
-
+#ifdef COLOR_SENSOR
 
   tcs.getRawData(&r, &g, &b, &c);
   // colorTemp = tcs.calculateColorTemperature(r, g, b);
@@ -496,6 +539,7 @@ void read_color_sensor(){
   else if (( r > CS_RED ) and (g < CS_GREEN)){
     return;
   }
+#endif
 }
 
 void calibration(){
@@ -521,7 +565,7 @@ void calibration(){
     }
     delay(1000);
     digitalWrite(LED , LOW);
-
+  #ifdef SCREEN
     display.clearDisplay();
     display.setCursor(0, 0);
     
@@ -556,7 +600,7 @@ void calibration(){
     display.println(string_for_display);
     
     display.display();
-
+#endif
     mySerial.print("calibration done");
 }
 
@@ -790,14 +834,15 @@ void drive_motor ( motor_t motor_e , int spd)
       case LEFT:
         switch (dir) {
           case FORWARD:
-            spd += 65;
-            digitalWrite( MOTOR_A_DIR, LOW ); // direction = forward
-            analogWrite( MOTOR_A_PWM, spd ); // PWM speed      
+            //spd += 65;
+            motor_speed = 190 - spd;
+            digitalWrite( MOTOR_A_DIR, HIGH ); // direction = forward
+            analogWrite( MOTOR_A_PWM, motor_speed ); // PWM speed      
           break;
           
           case BACKWARD:
             motor_speed = 190 - spd;
-            digitalWrite( MOTOR_A_DIR, HIGH ); // direction = backward
+            digitalWrite( MOTOR_A_DIR, LOW ); // direction = backward
             analogWrite( MOTOR_A_PWM, motor_speed ); // PWM speed              
           break;        
         }    
@@ -864,3 +909,31 @@ void motor_l_interrupt() {
 }
 
 */
+
+void drop_zone() {
+   while (digitalRead (SIDE_SENSOR) == LOW) {
+     drive_motor (LEFT,30);
+     drive_motor (RIGHT, 30);
+     delay(10);
+     stop_motor(LEFT);
+     stop_motor(RIGHT);
+   }
+    stop_motor(LEFT);
+    stop_motor(RIGHT);
+    drop_egg();
+}
+
+
+void drop_egg() {
+  /*for (pos = 0; pos <= 180; pos += 5) { // goes from 0 degrees to 180 degrees
+    // in steps of 5 degree
+    myservo.write(90);              // tell servo to go to position in variable 'pos'
+    delay(5);                       // waits 15ms for the servo to reach the position
+  }*/
+  for (pos = 180; pos >= 45; pos -= 1) { // goes from 180 degrees to 0 degrees
+    myservo.write(pos);              // tell servo to go to position in variable 'pos'
+    delay(10);                       // waits 15ms for the servo to reach the position
+  }
+delay (250);
+myservo.write(180);
+}
