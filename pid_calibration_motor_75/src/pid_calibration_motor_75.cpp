@@ -15,59 +15,10 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <SoftwareSerial.h>
-
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
-// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
-#define OLED_RESET     4 // Reset pin # (or -1 if sharing Arduino reset pin)
-
-typedef enum dir {F,B} motor_dir_t;
-typedef enum motor_e {  LEFT,  RIGHT  } motor_t;
-typedef enum motor_direction_e {  FORWARD,  BACKWARD  } motor_direction_t;
-typedef enum m_dir {CW, CCW} motor_real_dir_t;
-
-// PIN DEFINITION //
-#ifdef ARDUINO_NANO
-  const int S1 = A6;
-#endif
-#ifdef ARDUINO_LEONARDO
-  const int S1 = A4;
-#endif
-const int S2 = A3;
-const int S3 = A2;
-const int S4 = A1;
-const int S5 = A0;
-
-const int MOTOR_A_DIR1 = 1; 
-const int MOTOR_A_DIR2 = 12;
-const int MOTOR_A_PWM  = 11; 
-const int MOTOR_B_DIR1 = 0; 
-const int MOTOR_B_DIR2 = 10; 
-const int MOTOR_B_PWM  = 9;
-
-const int BUTTON = MOSI;
-const int BUTTON2 = 4;
-const int TX = SCK;// 15=sck on leonardo/micro
-const int RX = MISO;// 14=miso on leonardo/micro
-
-// CONSTANTS //
-const long V_MAX_MAP_VALUE = 2000000;
-const long TURN_FACTOR = 59000;//59000
-const long FACTOR_P = 650;//650
-const long FACTOR_I = 100;//57;120
-const long FACTOR_D = 2800;//2800
-const int MAX_SPEED = 55;//50
-const int MIN_SPEED = 10;//60;//20
-const int S_WHITE = 350;
-const int L_s1 = 1000;
-const int L_s2 = 2000;
-const int L_s3 = 3000;
-const int L_s4 = 4000;
-const int L_s5 = 5000;
-const int BASIC_DELAY = 0;
-const int IDLE_DELAY = 0; // 20
-const uint8_t SENSOR_ARRAY[] = {S1 ,S2 ,S3 ,S4 ,S5 };
-
+#include "typedefs.h"
+#include "pinout.h"
+#include "constants.h"
+#include "function_declarations.h"
 
 char string_for_display[4];
 char string_for_myserial[10];
@@ -83,15 +34,6 @@ int S_MAX_ARRAY[] = {0 ,0 ,0 ,0 ,0};
 
 //const int BASIC_SPEED = 25;
 
-
-void init_line_sensor();
-void calibration ();
-int update_min_max (uint8_t sn, int n);
-long PID (int line_sensor_value, int Perror_old);
-int read_line_sensor();
-void drive_motor ( motor_t motor_e , int spd);
-void stop_motors ();
-long long_abs(long x);
 
 SoftwareSerial mySerial(RX,TX); // RX, TX
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -170,17 +112,6 @@ void loop() {
   }
   else {
     digitalWrite(LED_BUILTIN,HIGH);//if led high there is no line
-/*    stop_motor(RIGHT);
-    stop_motor(LEFT);
-    display.clearDisplay();
-    display.setCursor(0, 0);
-    sprintf(string_for_display,"%03d ",final_line_sensor_value);
-    display.print(string_for_display);
-    display.display();
-    while(1){
-      delay(1);
-    }
-  }*/
     if(Perror_old >= 0){
       final_line_sensor_value = 2000;
     }
@@ -256,15 +187,11 @@ void loop() {
 void calibration(){
     int no_calibration_counter = 0;
     digitalWrite(LED_BUILTIN , HIGH);
-//    mySerial.println("calibration");
     while(no_calibration_counter < 500){
       for(int i = 0; i < 5; i++){      
         int flag = update_min_max (SENSOR_ARRAY[i] , i);       
         if(flag == 0){
           no_calibration_counter = 0;
-//          mySerial.print(i);
-//          mySerial.println ("calibrated");
-        
         }    
         else{
           no_calibration_counter++;
@@ -311,8 +238,6 @@ void calibration(){
     display.println(string_for_display);
     
     display.display();
-
-//    mySerial.print("calibration done");
 }
 
 int update_min_max (uint8_t sn, int n){ 
@@ -345,10 +270,10 @@ long PID (int line_sensor_value, int Perror_old) {
     }
     constrain(Ierror,-2000*FACTOR_P/FACTOR_I,2000*FACTOR_P/FACTOR_I);
   //}
-//  else{
-//    Ierror = 0;
-//  }
-//      max 50,              max 30              max 10
+  //  else{
+  //    Ierror = 0;
+  //  }
+  //      max 50,              max 30              max 10
   f = ((long)Perror) * FACTOR_P + ((long)Derror) * FACTOR_D + ((long)Ierror) * FACTOR_I;
   /*mySerial.print(", P = ");
   mySerial.print(Perror);*/
