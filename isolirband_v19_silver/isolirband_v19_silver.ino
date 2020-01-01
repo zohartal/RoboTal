@@ -3,6 +3,7 @@
 #include "calibration.h"
 #include "display.h"
 #include <SoftwareSerial.h>
+#include "encoder_playback_arrays.h"
 //#include "sensor_monitor.c"
 
 //#include <arduino.h>
@@ -66,6 +67,8 @@ const char TRACK_5_L[] = {'L','R'};
 typedef enum trkn { TRACK_1, TRACK_2, TRACK_3_TEAM_A_TYPE_1, TRACK_3_TEAM_A_TYPE_2, TRACK_3_TEAM_B_TYPE_1, TRACK_3_TEAM_B_TYPE_2, TRACK_4, TRACK_5 } track_number_t;
 const int TRKN_MAX = 7;
 track_number_t track = TRACK_5;
+typedef enum stg { STAGE_1, STAGE_2, STAGE_3, STAGE_4, STAGE_5, STAGE_6, STAGE_7, STAGE_8, STAGE_9 } stage_number_t;
+stage_number_t stage;
 
 //const int LED = 13;
 
@@ -99,10 +102,16 @@ int split();
 track_number_t update_track(track_number_t);
 char* track_num_to_str(track_number_t track);  
 void turn_handler(int);
-void track_3_start_handler();
+void handler();
 
 void motor_r_interrupt();
 void motor_l_interrupt();
+
+void line_folower();
+void encoder_playback(int* left_array, int* right_array,int max_index);
+
+void encoder_follower (int target_r_cnt, int target_l_cnt, int basic_speed);
+bool stop_condition (stage_number_t curernt_stage);
 
 int motor_l_cnt;
 int motor_r_cnt;  
@@ -117,8 +126,8 @@ int max_speed = 100;
 void setup() {
 
   int i;
-  int motor_l_cnt = 0;
-  int motor_r_cnt = 0;
+  motor_l_cnt = 0;
+  motor_r_cnt = 0;
 
   Ierror = 0;
   
@@ -209,7 +218,7 @@ void setup() {
     case TRACK_3_TEAM_A_TYPE_1 :
       turn_side [0] = 'R';
       //turn_side [0] = 'L';
-      track_3_start_handler();
+      //track_3_start_handler();
       break;
     case TRACK_3_TEAM_B_TYPE_1 :
       //turn_side [0] = 'R';
@@ -217,11 +226,11 @@ void setup() {
       break;
     case TRACK_3_TEAM_A_TYPE_2 :
       turn_side [0] = 'R';
-      track_3_start_handler();
+      //track_3_start_handler();
       break;
     case TRACK_3_TEAM_B_TYPE_2 :
       turn_side [0] = 'L';
-      track_3_start_handler();
+      //track_3_start_handler();
     case TRACK_5 :
       turn_side [0] = 'L';
       max_speed = 70;
@@ -229,12 +238,16 @@ void setup() {
   }
 
   time_flag = push_time;
-  //sensor_monitor();
+  stage = STAGE_4;
+  handler();
 }
 
 
 void loop() {
-//  int line_value = read_line_sensor();
+  line_folower();
+}
+
+void line_folower(){
   int line_sensor_value;
   int pid;
   int motor_R_speed = 0;
@@ -347,24 +360,104 @@ void loop() {
       time_flag = time;
   }
 #endif
+  return;
 }
 
-void track_3_start_handler(){
-  if (track == TRACK_3_TEAM_A_TYPE_1){
-    drive_motor(RIGHT, 20);
-    drive_motor(LEFT, 50);
+// need to implement - follow encounter values until they pass the defined values
+void encoder_follower (int target_r_cnt, int target_l_cnt, int basic_speed) {
+  
+}
+
+// need to implement - per stage, set stop condition (based on encoders, sensors etc.)
+bool stop_condition (stage_number_t curernt_stage) {
+  // example
+  if ( read_line_sensor() >=0 ) {
+    return true; 
   }
-  if (track == TRACK_3_TEAM_A_TYPE_2){
-      drive_motor(RIGHT, 40);
-      drive_motor(LEFT, 40);
+  else {
+    return false;
+  }  
+}
+
+void handler (){
+  switch(stage){
+    case STAGE_2 :
+      drive_motor(RIGHT,30);
+      drive_motor(LEFT,80);
+      delay(1230);
+    break;
+
+    case STAGE_4 :
+      drive_motor(RIGHT,40);
+      drive_motor(LEFT,-40);
+      delay(670);
+      drive_motor(RIGHT,30);
+      drive_motor(LEFT,80);
+      delay(1040);
+
+    break;
+
+    case STAGE_6 :
+
+    break;
+
+    case STAGE_7 :
+
+    break;
+
+    case STAGE_8 :
+
+    break;
   }
-  if (track == TRACK_3_TEAM_B_TYPE_2){
-      drive_motor(RIGHT, 20);
-      drive_motor(LEFT, 50);
-  }
-  delay(600);
   stop_motor(RIGHT);
   stop_motor(LEFT);
+  return;
+}
+
+void encoder_playback(int* left_array, int* right_array,int max_index){
+  int drive_factor = 2;
+  int l_move = 0;
+  int r_move = 0;
+  int drive_delay = 90;
+
+  for(int i = 0; i < max_index; i ++){
+    while((motor_r_cnt < right_array[i]) and (motor_l_cnt < left_array[i])){
+      if(((right_array [i] - motor_r_cnt) < 40 ) and ((left_array [i] - motor_l_cnt) < 40 )){
+        mySerial.println(" break ");
+        break;
+      }
+      mySerial.print(i);
+      mySerial.print(" encoder_l = ");
+      mySerial.print(motor_l_cnt);
+      mySerial.print(" encoder_r = ");
+      mySerial.print(motor_r_cnt);
+      mySerial.print(" left_array = ");
+      mySerial.print(left_array[i]);
+      mySerial.print(" right_array = ");
+      mySerial.print(right_array[i]);
+      l_move = (left_array [i] - motor_l_cnt) / drive_factor;
+      r_move = (right_array [i] - motor_r_cnt) / drive_factor;
+      mySerial.print(" r_move = ");
+      mySerial.print(r_move);
+      mySerial.print(" l_move = ");
+      mySerial.println(l_move);
+      drive_motor(RIGHT, l_move);
+      drive_motor(LEFT, r_move);
+      delay(drive_delay);
+    }
+  }
+  while((motor_l_cnt < left_array [max_index]) or (motor_r_cnt < right_array [max_index])){
+    if(motor_l_cnt < left_array [max_index]){
+      drive_motor (LEFT,20);
+    }
+    if(motor_r_cnt < right_array [max_index]){
+      drive_motor (RIGHT,20);
+    }
+    delay(1);
+  }
+  stop_motor(RIGHT);
+  stop_motor(LEFT);
+  return;
 }
 
 int read_line_sensor() {
@@ -554,6 +647,7 @@ void calibration(){
     display.display();
 
     mySerial.print("calibration done");
+    return;
 }
 
 int update_min_max (uint8_t sn, int n){ 

@@ -1,6 +1,6 @@
 const int S_WHITE = 350;
 
-int black_sensors;
+int black_sensors = 4;
 char turn_side[1];
 int max_turn_side = 0;
 

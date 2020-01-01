@@ -158,6 +158,7 @@ void setup() {
       
   time_flag = push_time;
   //sensor_monitor();
+  digitalWrite (LED,HIGH);
 }
 
 int tmp_i = 0;
@@ -172,6 +173,7 @@ void loop() {
   unsigned long time_from_start = curr_time - push_time;
 
   if(digitalRead (BUTTON2 ) == LOW){
+    digitalWrite (LED,LOW);
     motor_r_cnt = 0;
     motor_l_cnt = 0;  
   }
