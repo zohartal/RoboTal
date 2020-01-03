@@ -7,3 +7,4 @@ int read_line_sensor();
 void drive_motor ( motor_t motor_e , int spd);
 void stop_motors ();
 long long_abs(long x);
+int motor_speed_map(int spd);

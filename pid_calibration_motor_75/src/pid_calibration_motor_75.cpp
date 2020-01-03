@@ -8,7 +8,7 @@
 #endif
   
 #define MOTOR
-#define SERIAL_ON
+//#define SERIAL_ON
 
 //#include <SPI.h>
 #include <Wire.h>
@@ -96,7 +96,7 @@ void loop() {
   long pid;
   int motor_R_speed = 0;
   int motor_L_speed = 0;
-  int split_number = 0;
+  //int split_number = 0;
   unsigned long time = millis();
 
   digitalWrite(LED_BUILTIN,LOW);
@@ -121,19 +121,44 @@ void loop() {
     
   }
   pid = PID(final_line_sensor_value,Perror_old);
-  constrain(pid,-V_MAX_MAP_VALUE,V_MAX_MAP_VALUE);
+  pid = constrain(pid,-V_MAX_MAP_VALUE,V_MAX_MAP_VALUE);
   Perror_old = final_line_sensor_value;
 
-  unsigned long abs_pid = long_abs(pid);
-  long v = map(abs_pid,0,V_MAX_MAP_VALUE,MAX_SPEED,0);
-  unsigned long vm = abs_pid/TURN_FACTOR;
+  //unsigned long abs_pid = long_abs(pid);
+
+  if(pid > 0){
+    motor_L_speed = map(pid, 0, V_MAX_MAP_VALUE, MAX_SPEED, MIN_SPEED);
+    motor_R_speed = map(pid, 0, V_MAX_MAP_VALUE, MAX_SPEED, -MIN_SPEED);
+  }
+  else{
+    motor_R_speed = map(pid, 0, -V_MAX_MAP_VALUE, MAX_SPEED, MIN_SPEED);
+    motor_L_speed = map(pid, 0, -V_MAX_MAP_VALUE, MAX_SPEED, -MIN_SPEED);
+  }
+
+  /*
+  long v = map(abs_pid,0,V_MAX_MAP_VALUE,100,0);
+  unsigned long vm = 100 - (abs_pid/TURN_FACTOR);
 
   v = constrain(v,MIN_SPEED,MAX_SPEED);
   //vm = constrain(vm,0,100);
 
   //v = 50; // [AT] make v constant, for easier PID settings
-  //motor_L_speed = map(pid,-50,50,-50,100);
-  //motor_R_speed = map(pid,50,-50,-50,100);
+  if(pid > 0){
+    motor_R_speed = vm;
+    motor_L_speed = v;
+  }
+  else{
+    motor_L_speed = vm;
+    motor_R_speed = v;
+  }
+  motor_L_speed = constrain(motorl_L_speed,MIN_SPEED,MAX_SPEED);
+  if((motor_L_speed>-10)and(motor_L_speed<10)){
+    motor_L_speed = 10;
+  }
+    motor_R_speed = constrain(motorl_R_speed,MIN_SPEED,MAX_SPEED);
+  if((motor_R_speed>-10)and(motor_R_speed<10)){
+    motor_R_speed = 10;
+  }
 
   if(pid > 0){
     motor_L_speed = abs_pid/25000;//v;
@@ -145,7 +170,7 @@ void loop() {
     motor_R_speed = abs_pid/25000;
     map(motor_R_speed,0,80,MIN_SPEED,MAX_SPEED);
   }
-
+  */
 #ifdef SERIAL_ON
 
   
@@ -413,6 +438,17 @@ void init_line_sensor() {
 
 }
 
+int motor_speed_map(int spd){
+  spd = map(spd,-100,100, -MAX_SPEED, MAX_SPEED);
+  if((spd>-MIN_SPEED)and(spd<0)){
+    spd = -MIN_SPEED;
+  }
+  if((spd<MIN_SPEED)and(spd>0)){
+    spd = MIN_SPEED;
+  }
+  //if()
+  return spd;
+}
 
 void stop_motors ( ) {
   digitalWrite( MOTOR_A_PWM, HIGH );
