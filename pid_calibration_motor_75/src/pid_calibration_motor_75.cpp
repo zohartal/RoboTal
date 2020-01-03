@@ -206,7 +206,7 @@ void calibration(){
 
     display.clearDisplay();
     display.setCursor(0, 0);
-    
+
     display.print ("s1: ");
     sprintf(string_for_display,"%03d ",S_MIN_ARRAY[0]);
     display.print(string_for_display);
@@ -268,7 +268,7 @@ long PID (int line_sensor_value, int Perror_old) {
     else{
       Ierror += Perror;
     }
-    constrain(Ierror,-2000*FACTOR_P/FACTOR_I,2000*FACTOR_P/FACTOR_I);
+    Ierror = constrain(Ierror,-2000*FACTOR_P/FACTOR_I,2000*FACTOR_P/FACTOR_I);
   //}
   //  else{
   //    Ierror = 0;
