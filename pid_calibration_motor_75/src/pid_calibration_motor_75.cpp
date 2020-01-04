@@ -21,6 +21,7 @@
 #include "function_declarations.h"
 
 char string_for_display[4];
+char string_for_5c[5];
 char string_for_myserial[10];
 int Perror_old;
 unsigned long time;
@@ -33,7 +34,8 @@ int S_MAX_ARRAY[] = {0 ,0 ,0 ,0 ,0};
 
 
 //const int BASIC_SPEED = 25;
-
+unsigned long loop_start_time;
+int loop_num = 0;
 
 SoftwareSerial mySerial(RX,TX); // RX, TX
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -84,10 +86,11 @@ void setup() {
   while(digitalRead (BUTTON) == HIGH){
     if(digitalRead (BUTTON2) == LOW){
       delay(500);
-      calibration();
+      automatic_calibration();
     }
   }
   digitalWrite(LED_BUILTIN,LOW);
+  loop_start_time = millis();
 }
 
 void loop() {
@@ -97,7 +100,7 @@ void loop() {
   int motor_R_speed = 0;
   int motor_L_speed = 0;
   //int split_number = 0;
-  unsigned long time = millis();
+  
 
   digitalWrite(LED_BUILTIN,LOW);
 
@@ -135,42 +138,7 @@ void loop() {
     motor_L_speed = map(pid, 0, -V_MAX_MAP_VALUE, MAX_SPEED, -MIN_SPEED);
   }
 
-  /*
-  long v = map(abs_pid,0,V_MAX_MAP_VALUE,100,0);
-  unsigned long vm = 100 - (abs_pid/TURN_FACTOR);
 
-  v = constrain(v,MIN_SPEED,MAX_SPEED);
-  //vm = constrain(vm,0,100);
-
-  //v = 50; // [AT] make v constant, for easier PID settings
-  if(pid > 0){
-    motor_R_speed = vm;
-    motor_L_speed = v;
-  }
-  else{
-    motor_L_speed = vm;
-    motor_R_speed = v;
-  }
-  motor_L_speed = constrain(motorl_L_speed,MIN_SPEED,MAX_SPEED);
-  if((motor_L_speed>-10)and(motor_L_speed<10)){
-    motor_L_speed = 10;
-  }
-    motor_R_speed = constrain(motorl_R_speed,MIN_SPEED,MAX_SPEED);
-  if((motor_R_speed>-10)and(motor_R_speed<10)){
-    motor_R_speed = 10;
-  }
-
-  if(pid > 0){
-    motor_L_speed = abs_pid/25000;//v;
-    map(motor_L_speed,0,80,MIN_SPEED,MAX_SPEED);
-    motor_R_speed = MIN_SPEED;//v - vm;
-  }
-  else{
-    motor_L_speed = MIN_SPEED;
-    motor_R_speed = abs_pid/25000;
-    map(motor_R_speed,0,80,MIN_SPEED,MAX_SPEED);
-  }
-  */
 #ifdef SERIAL_ON
 
   
@@ -198,15 +166,106 @@ void loop() {
   
 #endif
 
-  if (IDLE_DELAY > 0) {
-    stop_motors();
-    //stop_motor(LEFT);
-    delay(IDLE_DELAY);
-  }
-
   drive_motor(RIGHT, motor_R_speed);
   drive_motor(LEFT, motor_L_speed);
 
+  loop_num++;
+  if(millis() - loop_start_time >= DEBUG_LOOP_TIME){
+    show_loop_time_results();
+  }
+}
+
+void show_loop_time_results(){
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.println ("loop_num = ");
+  sprintf(string_for_5c,"%05d",loop_num);
+  display.print(string_for_5c);
+  display.display();
+  stop_motors();
+  while(1){
+    delay(1);
+  }
+}
+
+void automatic_calibration(){
+  digitalWrite(LED_BUILTIN, HIGH);
+  int calibration_time = millis();
+  unsigned long time_diff = millis()-calibration_time;
+  while(time_diff < 3000){
+      for(int i = 0; i < 5; i++){  
+        time_diff = millis()-calibration_time;    
+        int flag = update_min_max (SENSOR_ARRAY[i] , i);    
+        if(i == 4){
+          drive_motor(LEFT,30);
+          drive_motor(RIGHT,23);
+          delay(30);
+          stop_motors();
+          delay(50);
+        }  
+       /* if(((time_diff>990)and(time_diff<1010))){
+          drive_motor(LEFT,30);
+          drive_motor(RIGHT,30);
+          delay(50);
+          stop_motors();
+        }
+        if(((time_diff>1990)and(time_diff<2010))){
+          drive_motor(LEFT,-30);
+          drive_motor(RIGHT,-30);
+          delay(50);
+          stop_motors();
+        }   
+        if(((time_diff>2990)and(time_diff<3010))){
+          drive_motor(LEFT,50);
+          drive_motor(RIGHT,30);
+          delay(50);
+          stop_motors();
+        } 
+        if(((time_diff>3990)and(time_diff<4010))){
+          drive_motor(LEFT,-30);
+          drive_motor(RIGHT,-30);
+          delay(50);
+          stop_motors();
+        }*/
+      }
+    }
+
+    digitalWrite(LED_BUILTIN, LOW);
+
+    display.clearDisplay();
+    display.setCursor(0, 0);
+
+    display.print ("s1: ");
+    sprintf(string_for_display,"%03d ",S_MIN_ARRAY[0]);
+    display.print(string_for_display);
+    sprintf(string_for_display,"%03d ",S_MAX_ARRAY[0]);
+    display.println(string_for_display);
+    
+    display.print ("s2: ");
+    sprintf(string_for_display,"%03d ",S_MIN_ARRAY[1]);
+    display.print(string_for_display);
+    sprintf(string_for_display,"%03d ",S_MAX_ARRAY[1]);
+    display.println(string_for_display);
+    
+    display.print ("s3: ");
+    sprintf(string_for_display,"%03d ",S_MIN_ARRAY[2]);
+    display.print(string_for_display);
+    sprintf(string_for_display,"%03d ",S_MAX_ARRAY[2]);
+    display.println(string_for_display);
+    
+    display.print ("s4: ");
+    sprintf(string_for_display,"%03d ",S_MIN_ARRAY[3]);
+    display.print(string_for_display);
+    sprintf(string_for_display,"%03d ",S_MAX_ARRAY[3]);
+    display.println(string_for_display);
+    
+    display.print ("s5: ");
+    sprintf(string_for_display,"%03d ",S_MIN_ARRAY[4]);
+    display.print(string_for_display);
+    sprintf(string_for_display,"%03d ",S_MAX_ARRAY[4]);
+    display.println(string_for_display);
+    
+    display.display();
 }
 
 void calibration(){
@@ -287,7 +346,7 @@ long PID (int line_sensor_value, int Perror_old) {
   long f;
 
   //if( abs(Perror) < 1100){
-    if( abs (Perror) < 20){
+    if( abs (Perror) < 100){
       Ierror = 0;
     }
     else{

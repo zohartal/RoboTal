@@ -3,11 +3,11 @@
 // PID parameters //
 const long V_MAX_MAP_VALUE = 2000000;
 //const long TURN_FACTOR = 20000;//59000
-const long FACTOR_P = 1000;//650
-const long FACTOR_I = 0;//100;//57;120
-const long FACTOR_D = 0;//2800;//2800
+const long FACTOR_P = 1100;//650
+const long FACTOR_I = 110;//100;//57;120
+const long FACTOR_D = 380;//2800
 const int MAX_SPEED = 77;//50
-const int MIN_SPEED = 15;//60;//20
+const int MIN_SPEED = 40;//60;//20
 const int S_WHITE = 350;
 
 //const int BASIC_DELAY = 0;
@@ -21,6 +21,8 @@ const int L_s4 = 4000;
 const int L_s5 = 5000;
 
 const uint8_t SENSOR_ARRAY[] = {S1 ,S2 ,S3 ,S4 ,S5 };
+
+const unsigned long DEBUG_LOOP_TIME = 20000;
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
