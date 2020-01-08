@@ -10,3 +10,4 @@ long long_abs(long x);
 int motor_speed_map(int spd);
 void show_loop_time_results();
 void automatic_calibration();
+void color_sensor_calibration();

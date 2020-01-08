@@ -32,6 +32,9 @@ int final_line_sensor_value;
 int S_MIN_ARRAY[] = {1000 ,1000 ,1000 ,1000 ,1000};
 int S_MAX_ARRAY[] = {0 ,0 ,0 ,0 ,0};
 
+uint16_t color_min[4];
+uint16_t color_max[4];
+uint16_t readed_color[4];
 
 //const int BASIC_SPEED = 25;
 unsigned long loop_start_time;
@@ -62,6 +65,13 @@ void setup() {
 
   mySerial.begin(38400);
   mySerial.println("start");
+
+  if (tcs.begin()) {
+    //Serial.println("Found sensor");
+  } else {
+    //Serial.println("No TCS34725 found ... check your connections");
+    while (1);
+  }
 
   if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3c)) { 
     digitalWrite(LED_BUILTIN,HIGH);
@@ -187,6 +197,8 @@ void show_loop_time_results(){
     delay(1);
   }
 }
+
+
 
 void automatic_calibration(){
   digitalWrite(LED_BUILTIN, HIGH);
