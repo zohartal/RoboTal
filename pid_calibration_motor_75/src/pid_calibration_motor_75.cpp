@@ -19,6 +19,7 @@
 #include "pinout.h"
 #include "constants.h"
 #include "function_declarations.h"
+#include "try1.h"
 
 char string_for_display[4];
 char string_for_5c[5];
@@ -90,6 +91,7 @@ void setup() {
     }
   }
   digitalWrite(LED_BUILTIN,LOW);
+  try1();
   loop_start_time = millis();
 }
 
