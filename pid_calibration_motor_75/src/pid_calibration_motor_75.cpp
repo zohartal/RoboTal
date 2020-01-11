@@ -6,7 +6,7 @@
     ERROR!!!!!
   #endif
 #endif
-//#define COLOR_SENSOR_CPP
+
 #define MOTOR
 //#define SERIAL_ON
 
@@ -27,24 +27,24 @@
 #include "pinout.h"
 #include "constants.h"
 #include "function_declarations.h"
-#ifdef COLOR_SENSOR_CPP
-  #include "color_sensor.h"
-#endif
 
-#ifndef COLOR_SENSOR_CPP
+#include "color_sensor.h"
+
+
+
 uint16_t color_min[4] = {0, 0, 0, 0};
 uint16_t color_max[4] = {0, 0, 0, 0};
 uint16_t readed_color[4];
 
-const int RED = 0;
-const int GREEN = 1;
-const int BLUE = 2;
-const int C = 3;
+// const int RED = 0;
+// const int GREEN = 1;
+// const int BLUE = 2;
+// const int C = 3;
 
-void color_display();
+//void color_display();
 void colored_line_follow(int line_color);
-void color_sensor_calibration(Adafruit_TCS34725 tcs, Adafruit_SSD1306 display);
-#endif
+//void color_sensor_calibration(Adafruit_TCS34725 tcs, Adafruit_SSD1306 display);
+
 
 
 
@@ -59,7 +59,6 @@ int black_sensors;
 int final_line_sensor_value;
 int S_MIN_ARRAY[] = {1000 ,1000 ,1000 ,1000 ,1000};
 int S_MAX_ARRAY[] = {0 ,0 ,0 ,0 ,0};
-
 
 //const int BASIC_SPEED = 25;
 unsigned long loop_start_time;
@@ -131,7 +130,7 @@ void setup() {
     if(digitalRead (BUTTON2) == LOW){
       delay(500);
       //automatic_calibration();
-      color_sensor_calibration(tcs, display);
+      color_sensor_calibration(tcs, display, &color_min[0], &color_max[0]);
     }
   }
   digitalWrite(LED_BUILTIN,LOW);
@@ -149,6 +148,7 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
+  uint16_t readed_color[4];
   int line_sensor_value;
   long pid;
   int motor_R_speed = 0;
@@ -639,61 +639,8 @@ long long_abs(long x){
   }
 }
 
-
-#ifndef COLOR_SENSOR_CPP
-void color_sensor_calibration(Adafruit_TCS34725 tcs, Adafruit_SSD1306 display){
-    char string_for_display[5];
-    unsigned long start_time = millis();
-    display.clearDisplay();
-    display.display();
-    //tcs.getRawData(&readed_color[RED], &readed_color[GREEN], &readed_color[BLUE], &readed_color[C]);
-    while(millis() - start_time < 5000){
-        tcs.getRawData(&readed_color[RED], &readed_color[GREEN], &readed_color[BLUE], &readed_color[C]);
-        for(int i = 0; i < 4; i++){
-          //  tcs.getRawData(&readed_color[RED], &readed_color[GREEN], &readed_color[BLUE], &readed_color[C]);
-            if((readed_color[i] > color_max[i])or(readed_color[i] < color_min[i])){
-                if(readed_color[i] > color_max[i]){
-                    color_max[i] = readed_color[i];
-                }
-
-                /*else{
-                    color_min[i] = readed_color[i];
-                }*/
-            }
-        }
-    }
-    display.clearDisplay();
-    display.setCursor(0, 0);
-
-    display.print ("RED: ");
-    sprintf(string_for_display,"%05u ",color_min[RED]);
-    display.print(string_for_display);
-    sprintf(string_for_display,"%05u ",color_max[RED]);
-    display.println(string_for_display);
-    
-    display.print ("GREEN: ");
-    sprintf(string_for_display,"%05u ",color_min[GREEN]);
-    display.print(string_for_display);
-    sprintf(string_for_display,"%05u ",color_max[GREEN]);
-    display.println(string_for_display);
-    
-    display.print ("BLUE: ");
-    sprintf(string_for_display,"%05u ",color_min[BLUE]);
-    display.print(string_for_display);
-    sprintf(string_for_display,"%05u ",color_max[BLUE]);
-    display.println(string_for_display);
-    
-    display.print ("C: ");
-    sprintf(string_for_display,"%05u ",color_min[C]);
-    display.print(string_for_display);
-    sprintf(string_for_display,"%05u ",color_max[C]);
-    display.println(string_for_display);
-    
-    display.display();
-}
-#endif
-
 void colored_line_follow(int line_color){
+  uint16_t readed_color[4];
   tcs.getRawData(&readed_color[RED], &readed_color[GREEN], &readed_color[BLUE], &readed_color[C]);
   if(map (readed_color[line_color], color_min[line_color], color_max[line_color], 0, 1000) > 400){
     drive_motor(LEFT, 20);
@@ -703,30 +650,4 @@ void colored_line_follow(int line_color){
     drive_motor(LEFT, 0);
     drive_motor(RIGHT, 20);
   }
-}
-
-void color_display(){
-  tcs.getRawData(&readed_color[RED], &readed_color[GREEN], &readed_color[BLUE], &readed_color[C]);
-
-  display.clearDisplay();
-  display.setCursor(0, 0);
-
-  display.print ("RED: ");
-  sprintf(string_for_display,"%05ld ",map( readed_color[RED], color_min[RED], color_max[RED], 0, 1000));
-  display.println(string_for_display);
- 
-  
-  display.print ("GREEN: ");
-  sprintf(string_for_display,"%05ld ",map( readed_color[GREEN], color_min[GREEN], color_max[GREEN], 0, 1000));
-  display.println(string_for_display);
-  
-  display.print ("BLUE: ");
-  sprintf(string_for_display,"%05ld ",map( readed_color[BLUE], color_min[BLUE], color_max[BLUE], 0, 1000));
-  display.println(string_for_display);
-
-  display.print ("C: ");
-  sprintf(string_for_display,"%05ld ",map( readed_color[C], color_min[C], color_max[C], 0, 1000));
-  display.println(string_for_display);
-    
-  display.display();
 }
