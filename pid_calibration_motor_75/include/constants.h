@@ -22,6 +22,9 @@ const int L_s5 = 5000;
 
 const uint8_t SENSOR_ARRAY[] = {S1 ,S2 ,S3 ,S4 ,S5 };
 
+//color sensor settings
+const int CS_WHITE_TH = 500;
+const int CS_BLACK_TH = 300;
 
 const unsigned long DEBUG_LOOP_TIME = 20000;
 
