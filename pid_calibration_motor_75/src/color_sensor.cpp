@@ -1,11 +1,13 @@
 //#include <Wire.h>
-#include "Adafruit_TCS34725.h"
+#ifdef COLOR_SENSOR_CPP
+#include "color_sensor.h"
  // const int BLACK = 1500;
   //const int WHITE = 5000;
   //const int YELLOW = 3500;
   //const int GREEN = 1300;
   //const int RED = 1300;
-Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_700MS, TCS34725_GAIN_1X);
+
+
 
  /* if (tcs.begin()) {
     //Serial.println("Found sensor");
@@ -53,19 +55,20 @@ Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_700MS, TCS347
   }*/
 //}
 
-void color_sensor_calibration(){
+void color_sensor_calibration(Adafruit_TCS34725 tcs, Adafruit_SSD1306 display){
+    char string_for_display[5];
     unsigned long start_time = millis();
     tcs.getRawData(&readed_color[RED], &readed_color[GREEN], &readed_color[BLUE], &readed_color[C]);
     while(millis() - start_time < 5000){
-        for(i = 0; i < 4; i++){
-            tcs.getRawData(&color_readed[RED], &color_readed[GREEN], &color_readed[BLUE], &color_readed[C]);
+        for(int i = 0; i < 4; i++){
+            tcs.getRawData(&readed_color[RED], &readed_color[GREEN], &readed_color[BLUE], &readed_color[C]);
             if((readed_color[i] > color_max[i])or(readed_color[i] < color_min[i])){
                 if(readed_color[i] > color_max[i]){
                     color_max[i] = readed_color[i];
                 }
 
                 else{
-                    color_min[i] = color_readed[i];
+                    color_min[i] = readed_color[i];
                 }
             }
         }
@@ -74,27 +77,27 @@ void color_sensor_calibration(){
     display.setCursor(0, 0);
 
     display.print ("RED: ");
-    sprintf(string_for_display,"%03d ",color_min[RED]);
+    sprintf(string_for_display,"%05d ",color_min[RED]);
     display.print(string_for_display);
     sprintf(string_for_display,"%03d ",color_max[RED]);
     display.println(string_for_display);
     
     display.print ("GREEN: ");
-    sprintf(string_for_display,"%03d ",color_min[GREEN]);
+    sprintf(string_for_display,"%05d ",color_min[GREEN]);
     display.print(string_for_display);
-    sprintf(string_for_display,"%03d ",color_max[GREEN]);
+    sprintf(string_for_display,"%05d ",color_max[GREEN]);
     display.println(string_for_display);
     
     display.print ("BLUE: ");
-    sprintf(string_for_display,"%03d ",color_min[BLUE]);
+    sprintf(string_for_display,"%05d ",color_min[BLUE]);
     display.print(string_for_display);
-    sprintf(string_for_display,"%03d ",color_max[BLUE]);
+    sprintf(string_for_display,"%05d ",color_max[BLUE]);
     display.println(string_for_display);
     
     display.print ("C: ");
-    sprintf(string_for_display,"%03d ",color_min[C]);
+    sprintf(string_for_display,"%05d ",color_min[C]);
     display.print(string_for_display);
-    sprintf(string_for_display,"%03d ",color_max[C]);
+    sprintf(string_for_display,"%05d ",color_max[C]);
     display.println(string_for_display);
     
     display.display();
@@ -189,3 +192,4 @@ switch (motor) {
   Serial.print("B: "); Serial.print(b, DEC); Serial.print(" ");
   Serial.print("C: "); Serial.print(c, DEC); Serial.print(" ");
   Serial.println(" ");*/
+#endif

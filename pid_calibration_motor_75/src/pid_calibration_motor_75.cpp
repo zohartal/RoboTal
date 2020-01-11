@@ -6,19 +6,45 @@
     ERROR!!!!!
   #endif
 #endif
-  
+//#define COLOR_SENSOR_CPP
 #define MOTOR
 //#define SERIAL_ON
 
 //#include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+
+#ifndef ADAFRUIT_SSD1306_H
+  #define ADAFRUIT_SSD1306_H
+  #include <Adafruit_SSD1306.h>
+#endif
+#ifndef ADAFRUIT_TCS34725_H
+  #define ADAFRUIT_TCS34725_H
+  #include <Adafruit_TCS34725.h>
+#endif
 #include <SoftwareSerial.h>
 #include "typedefs.h"
 #include "pinout.h"
 #include "constants.h"
 #include "function_declarations.h"
+#ifdef COLOR_SENSOR_CPP
+  #include "color_sensor.h"
+#endif
+
+#ifndef COLOR_SENSOR_CPP
+uint16_t color_min[4];
+uint16_t color_max[4];
+uint16_t readed_color[4];
+
+const int RED = 0;
+const int GREEN = 1;
+const int BLUE = 2;
+const int C = 3;
+
+void color_sensor_calibration(Adafruit_TCS34725 tcs, Adafruit_SSD1306 display);
+#endif
+
+
 
 char string_for_display[4];
 char string_for_5c[5];
@@ -32,9 +58,6 @@ int final_line_sensor_value;
 int S_MIN_ARRAY[] = {1000 ,1000 ,1000 ,1000 ,1000};
 int S_MAX_ARRAY[] = {0 ,0 ,0 ,0 ,0};
 
-uint16_t color_min[4];
-uint16_t color_max[4];
-uint16_t readed_color[4];
 
 //const int BASIC_SPEED = 25;
 unsigned long loop_start_time;
@@ -42,6 +65,7 @@ int loop_num = 0;
 
 SoftwareSerial mySerial(RX,TX); // RX, TX
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_2_4MS, TCS34725_GAIN_1X);
 
 void setup() {
 
@@ -96,7 +120,8 @@ void setup() {
   while(digitalRead (BUTTON) == HIGH){
     if(digitalRead (BUTTON2) == LOW){
       delay(500);
-      automatic_calibration();
+      //automatic_calibration();
+      color_sensor_calibration(tcs, display);
     }
   }
   digitalWrite(LED_BUILTIN,LOW);
@@ -585,3 +610,55 @@ long long_abs(long x){
     return -x;
   }
 }
+
+
+#ifndef COLOR_SENSOR_CPP
+void color_sensor_calibration(Adafruit_TCS34725 tcs, Adafruit_SSD1306 display){
+    char string_for_display[5];
+    unsigned long start_time = millis();
+    //tcs.getRawData(&readed_color[RED], &readed_color[GREEN], &readed_color[BLUE], &readed_color[C]);
+    while(millis() - start_time < 5000){
+        tcs.getRawData(&readed_color[RED], &readed_color[GREEN], &readed_color[BLUE], &readed_color[C]);
+        for(int i = 0; i < 4; i++){
+          //  tcs.getRawData(&readed_color[RED], &readed_color[GREEN], &readed_color[BLUE], &readed_color[C]);
+            if((readed_color[i] > color_max[i])or(readed_color[i] < color_min[i])){
+                if(readed_color[i] > color_max[i]){
+                    color_max[i] = readed_color[i];
+                }
+
+                else{
+                    color_min[i] = readed_color[i];
+                }
+            }
+        }
+    }
+    display.clearDisplay();
+    display.setCursor(0, 0);
+
+    display.print ("RED: ");
+    sprintf(string_for_display,"%05d ",color_min[RED]);
+    display.print(string_for_display);
+    sprintf(string_for_display,"%05d ",color_max[RED]);
+    display.println(string_for_display);
+    
+    display.print ("GREEN: ");
+    sprintf(string_for_display,"%05d ",color_min[GREEN]);
+    display.print(string_for_display);
+    sprintf(string_for_display,"%05d ",color_max[GREEN]);
+    display.println(string_for_display);
+    
+    display.print ("BLUE: ");
+    sprintf(string_for_display,"%05d ",color_min[BLUE]);
+    display.print(string_for_display);
+    sprintf(string_for_display,"%05d ",color_max[BLUE]);
+    display.println(string_for_display);
+    
+    display.print ("C: ");
+    sprintf(string_for_display,"%05d ",color_min[C]);
+    display.print(string_for_display);
+    sprintf(string_for_display,"%05d ",color_max[C]);
+    display.println(string_for_display);
+    
+    display.display();
+}
+#endif
