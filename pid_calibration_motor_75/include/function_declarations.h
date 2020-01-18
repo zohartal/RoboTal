@@ -10,3 +10,6 @@ long long_abs(long x);
 int motor_speed_map(int spd);
 void show_loop_time_results();
 void automatic_calibration();
+char* menu_num_to_str(menu_number_t item);
+menu_number_t update_menu_item (menu_number_t item_number);
+void line_follower();

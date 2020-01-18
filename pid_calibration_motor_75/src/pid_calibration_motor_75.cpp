@@ -118,21 +118,52 @@ void setup() {
   digitalWrite(LED_BUILTIN,HIGH);
   delay(500);
   digitalWrite(LED_BUILTIN,LOW);
-  while(digitalRead (BUTTON) == HIGH){
-    if(digitalRead (BUTTON2) == LOW){
-      delay(500);
-      automatic_calibration();
-     // color_sensor_calibration(tcs, display);
+  while(1){
+    while(digitalRead (BUTTON) == HIGH){
+      if(digitalRead (BUTTON2) == LOW){
+        delay(500);
+        item_number = update_menu_item (item_number);
+        display.clearDisplay();
+        display.setCursor(0, 0);
+        display.print(menu_num_to_str(item_number));
+        display.display();
+        //automatic_calibration();
+      // color_sensor_calibration(tcs, display);
+      }
+    }
+    switch(item_number) {
+      case TRACK_1:
+        //digitalWrite( LED_BUILTIN, HIGH);
+        while (1)
+        {
+          line_follower();
+        }
+        break;
+
+      case AUTO_CAL :
+        automatic_calibration();
+        break;
+
+      case COLOR_CAL :
+        break;
+
+      case DEBUG_TRACK :
+        unsigned long start_time = millis();
+        while(millis() - start_time < 20000){
+          line_follower();
+        }
+        show_loop_time_results();
+        break;
     }
   }
-  delay(1000);
+  /*delay(1000);
   while(digitalRead (BUTTON) == HIGH){
     if(digitalRead (BUTTON2) == LOW){
       delay(500);
       //automatic_calibration();
       color_sensor_calibration(tcs, display, &color_min[0], &color_max[0]);
     }
-  }
+  }*/
   digitalWrite(LED_BUILTIN,LOW);
   loop_start_time = millis();
 
@@ -147,8 +178,9 @@ void setup() {
 }
 
 void loop() {
+  line_follower();
   // put your main code here, to run repeatedly:
-  uint16_t readed_color[4];
+ /* uint16_t readed_color[4];
   int line_sensor_value;
   long pid;
   int motor_R_speed = 0;
@@ -220,7 +252,7 @@ void loop() {
   
 #endif
 
-  tcs.getRawData(&readed_color[RED], &readed_color[GREEN], &readed_color[BLUE], &readed_color[C]);
+  /*tcs.getRawData(&readed_color[RED], &readed_color[GREEN], &readed_color[BLUE], &readed_color[C]);
   if(((map( readed_color[BLUE], color_min[BLUE], color_max[BLUE], 0, 1000) > CS_BLACK_TH) and (map( readed_color[BLUE], color_min[BLUE], color_max[BLUE], 0, 1000) < CS_WHITE_TH))and(map( readed_color[RED], color_min[RED], color_max[RED], 0, 1000) > 500)){
     stop_motors();
     while (1){
@@ -231,11 +263,48 @@ void loop() {
 
   drive_motor(RIGHT, motor_R_speed);
   drive_motor(LEFT, motor_L_speed);
-
+*/
  /* loop_num++;
   if(millis() - loop_start_time >= DEBUG_LOOP_TIME){
     show_loop_time_results();
   }*/
+}
+
+menu_number_t update_menu_item (menu_number_t item_number){
+  if(item_number == MENU_MAX){
+    return (menu_number_t)0;
+  }
+  else{
+    return  (menu_number_t)(((int)item_number)+1) ;
+  }
+}
+
+char* menu_num_to_str(menu_number_t item) {
+  switch(item){
+    case AUTO_CAL :
+    return "AUTO_CAL";
+
+    case COLOR_CAL :
+    return "COLOR_CAL";
+
+    case DEBUG_TRACK :
+    return "DEBUG_TRACK";
+    
+    case TRACK_1 :
+    return "TRACK_1";
+    
+    /*case 4 :
+    return "TRACK_3_TEAM_B_TYPE_1";
+    
+    case 5 :
+    return "TRACK_3_TEAM_B_TYPE_2";
+
+    case 6 :
+    return "TRACK 4";
+
+    case 7 :
+    return "TRACK 5";
+  */}
 }
 
 void show_loop_time_results(){
@@ -246,24 +315,25 @@ void show_loop_time_results(){
   display.print(string_for_5c);
   display.display();
   stop_motors();
-  while(1){
+  while(digitalRead (BUTTON2) == HIGH){
     delay(1);
   }
+  delay(500);
 }
 
 
 
 void automatic_calibration(){
   digitalWrite(LED_BUILTIN, HIGH);
-  int calibration_time = millis();
+  unsigned long calibration_time = millis();
   unsigned long time_diff = millis()-calibration_time;
   while(time_diff < 3000){
       for(int i = 0; i < 5; i++){  
         time_diff = millis()-calibration_time;    
         int flag = update_min_max (SENSOR_ARRAY[i] , i);    
         if(i == 4){
-          drive_motor(LEFT,30);
-          drive_motor(RIGHT,23);
+          drive_motor(LEFT,15);
+          drive_motor(RIGHT,13);
           delay(30);
           stop_motors();
           delay(50);
@@ -650,4 +720,92 @@ void colored_line_follow(int line_color){
     drive_motor(LEFT, 0);
     drive_motor(RIGHT, 20);
   }
+}
+
+void line_follower(){
+  uint16_t readed_color[4];
+  int line_sensor_value;
+  long pid;
+  int motor_R_speed = 0;
+  int motor_L_speed = 0;
+  //int split_number = 0;
+  
+
+  digitalWrite(LED_BUILTIN,LOW);
+
+  line_sensor_value = read_line_sensor();
+  if (line_sensor_value != -1){
+    line_sensor_value-=2000;
+    final_line_sensor_value = line_sensor_value;
+    mySerial.print(" line_sensor_value = ");
+    mySerial.print(final_line_sensor_value);
+    mySerial.print(" time = ");
+    //mySerial.println(time);
+  }
+  else {
+    digitalWrite(LED_BUILTIN,HIGH);//if led high there is no line
+    if(Perror_old >= 0){
+      final_line_sensor_value = 2000;
+    }
+    else{
+      final_line_sensor_value = -2000;
+    }
+    
+  }
+  pid = PID(final_line_sensor_value,Perror_old);
+  pid = constrain(pid,-V_MAX_MAP_VALUE,V_MAX_MAP_VALUE);
+  Perror_old = final_line_sensor_value;
+
+  //unsigned long abs_pid = long_abs(pid);
+
+  if(pid > 0){
+    motor_L_speed = map(pid, 0, V_MAX_MAP_VALUE, MAX_SPEED, MIN_SPEED);
+    motor_R_speed = map(pid, 0, V_MAX_MAP_VALUE, MAX_SPEED, -MIN_SPEED);
+  }
+  else{
+    motor_R_speed = map(pid, 0, -V_MAX_MAP_VALUE, MAX_SPEED, MIN_SPEED);
+    motor_L_speed = map(pid, 0, -V_MAX_MAP_VALUE, MAX_SPEED, -MIN_SPEED);
+  }
+
+
+#ifdef SERIAL_ON
+
+  
+  //time = millis();
+  mySerial.print(", v= ");
+ // mySerial.print(v);
+
+  sprintf(string_for_myserial,"%ld",pid);
+  mySerial.print(", pid= ");
+  mySerial.print(string_for_myserial);
+
+ 
+  sprintf(string_for_myserial,"%ld",abs_pid);
+  mySerial.print(", |pid|= ");
+  mySerial.print(string_for_myserial);
+       
+  //mySerial.print(", vm= ");
+  mySerial.print(vm);
+
+  mySerial.print (" R = ");
+  mySerial.print (motor_R_speed);
+
+  mySerial.print (" L = ");
+  mySerial.println (motor_L_speed);
+  
+#endif
+
+  /*tcs.getRawData(&readed_color[RED], &readed_color[GREEN], &readed_color[BLUE], &readed_color[C]);
+  if(((map( readed_color[BLUE], color_min[BLUE], color_max[BLUE], 0, 1000) > CS_BLACK_TH) and (map( readed_color[BLUE], color_min[BLUE], color_max[BLUE], 0, 1000) < CS_WHITE_TH))and(map( readed_color[RED], color_min[RED], color_max[RED], 0, 1000) > 500)){
+    stop_motors();
+    while (1){
+      delay(1);
+    }
+    
+  }
+*/
+  drive_motor(RIGHT, motor_R_speed);
+  drive_motor(LEFT, motor_L_speed);
+
+  loop_num++;
 }
