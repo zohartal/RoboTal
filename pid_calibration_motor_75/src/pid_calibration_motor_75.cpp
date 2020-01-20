@@ -16,7 +16,7 @@
 
 #ifndef ADAFRUIT_SSD1306_H
   #define ADAFRUIT_SSD1306_H
-  #include <Adafruit_SSD1306.h>
+  #include <Adafruit_SSD1306.h> 
 #endif
 #ifndef ADAFRUIT_TCS34725_H
   #define ADAFRUIT_TCS34725_H
@@ -28,7 +28,7 @@
 #include "constants.h"
 #include "function_declarations.h"
 
-#include "color_sensor.h"
+#include "color_sensor_tcs34725.h"
 
 
 

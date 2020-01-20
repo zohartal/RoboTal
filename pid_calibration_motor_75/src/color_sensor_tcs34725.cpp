@@ -1,6 +1,6 @@
 #define COLOR_SENSOR_CPP
 #ifdef COLOR_SENSOR_CPP
-#include "color_sensor.h"
+#include "color_sensor_tcs34725.h"
 
 const int RED = 0;
 const int GREEN = 1;
