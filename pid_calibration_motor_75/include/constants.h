@@ -3,10 +3,10 @@
 // PID parameters //
 const long V_MAX_MAP_VALUE = 2000000;
 //const long TURN_FACTOR = 20000;//59000
-const long FACTOR_P = 1100;//650
-const long FACTOR_I = 110;//100;//57;120
-const long FACTOR_D = 380;//2800
-const int MAX_SPEED = 77;//50
+const long FACTOR_P = 1000;//650
+const long FACTOR_I = 70;//100;//57;120
+const long FACTOR_D = 1400;//380//2800
+const int MAX_SPEED = 80;//50
 const int MIN_SPEED = 40;//60;//20
 const int S_WHITE = 350;
 
