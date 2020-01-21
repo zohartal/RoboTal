@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <Wire.h>
+#include "cs01_register_space.h"
 #include "i2c_master_main.h"
 
 void setup()
