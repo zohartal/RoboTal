@@ -14,6 +14,8 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 
+#include <EEPROM.h>
+
 #ifndef ADAFRUIT_SSD1306_H
   #define ADAFRUIT_SSD1306_H
   #include <Adafruit_SSD1306.h>
@@ -27,10 +29,11 @@
 #include "pinout.h"
 #include "constants.h"
 #include "function_declarations.h"
-
+#include "service_functions.h"
 #include "color_sensor.h"
 
-
+int MAX_SPEED = 80;//50
+int MIN_SPEED = 40;//60;//20
 
 uint16_t color_min[4] = {0, 0, 0, 0};
 uint16_t color_max[4] = {0, 0, 0, 0};
@@ -63,6 +66,7 @@ int S_MAX_ARRAY[] = {0 ,0 ,0 ,0 ,0};
 //const int BASIC_SPEED = 25;
 unsigned long loop_start_time;
 int loop_num = 0;
+turn_side_t turn_side = R;
 
 SoftwareSerial mySerial(RX,TX); // RX, TX
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -132,28 +136,78 @@ void setup() {
       }
     }
     switch(item_number) {
-      case TRACK_1:
+      case EEPROM_2_SERIAL : {
+        eeprom_2_serial();
+        break;
+      }
+
+      case EEPROM_DEBUG_TRACK : {
+        for (int i =0;i<20;i++){
+          digitalWrite(LED_BUILTIN,HIGH);
+          delay(200);
+          digitalWrite(LED_BUILTIN,LOW);
+          delay(200);
+        }
+        uint16_t addr = 0;
+        while(addr < (uint16_t)(((int)EEPROM.length() -1))){
+          line_follower();
+          EEPROMWriteInt(addr, addr);
+          addr = addr + 2;
+          EEPROMWriteInt(addr, black_sensors);
+          addr = addr + 2;
+        }
+        show_loop_time_results();
+        break;
+      }
+
+      case TRACK_1: {
         //digitalWrite( LED_BUILTIN, HIGH);
         while (1)
         {
           line_follower();
         }
         break;
+      }
 
-      case AUTO_CAL :
+      case AUTO_CAL : {
         automatic_calibration();
         break;
+      }
 
-      case COLOR_CAL :
+      case COLOR_CAL : {
         break;
+      }
 
-      case DEBUG_TRACK :
+      case DEBUG_TRACK_L : {
+        int MAX_SPEED = 60;//50
+        int MIN_SPEED = 30;//60;//20
         unsigned long start_time = millis();
         while(millis() - start_time < 20000){
           line_follower();
         }
         show_loop_time_results();
         break;
+      }
+
+      case DEBUG_TRACK_N : {
+        unsigned long start_time = millis();
+        while(millis() - start_time < 20000){
+          line_follower();
+        }
+        show_loop_time_results();
+        break;
+      }
+
+      case DEBUG_TRACK_R : {
+        int MAX_SPEED = 60;//50
+        int MIN_SPEED = 30;//60;//20
+        unsigned long start_time = millis();
+        while(millis() - start_time < 20000){
+          line_follower();
+        }
+        show_loop_time_results();
+        break;
+      }
     }
   }
   /*delay(1000);
@@ -279,7 +333,7 @@ menu_number_t update_menu_item (menu_number_t item_number){
   }
 }
 
-char* menu_num_to_str(menu_number_t item) {
+String menu_num_to_str(menu_number_t item) {
   switch(item){
     case AUTO_CAL :
     return "AUTO_CAL";
@@ -287,8 +341,20 @@ char* menu_num_to_str(menu_number_t item) {
     case COLOR_CAL :
     return "COLOR_CAL";
 
-    case DEBUG_TRACK :
-    return "DEBUG_TRACK";
+    case DEBUG_TRACK_L :
+    return "DEBUG_TRACK_L";
+
+    case DEBUG_TRACK_N :
+    return "DEBUG_TRACK_N";
+
+    case DEBUG_TRACK_R :
+    return "DEBUG_TRACK_R";
+
+    case EEPROM_DEBUG_TRACK :
+    return "EEPROM_DEBUG_TRACK";
+    
+    case EEPROM_2_SERIAL :
+    return "EEPROM_2_SERIAL";
     
     case TRACK_1 :
     return "TRACK_1";
@@ -304,7 +370,297 @@ char* menu_num_to_str(menu_number_t item) {
 
     case 7 :
     return "TRACK 5";
-  */}
+  */
+  }
+  return "";
+}
+
+int split (){
+  int split_counter = 0;
+  
+ // return -1;
+  if(split_counter > 0){
+    split_counter = 0;
+    //mySerial.println(turn_side[split_counter]);
+  }
+ 
+  switch(black_sensors){
+    case 5:
+
+    case 7:
+      if((track == 'TRACK_1') or (track == 'TRACK_2') or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1) or (track == TRACK_4) or (track == TRACK_5)){
+        if(track == TRACK_4){
+          return -2;
+        }
+        if(turn_side == 'L'){
+          return 1000;
+        }
+        else{
+          return 3000;
+        }
+      }
+      else{
+        return -1;
+      }
+    case 9:
+      if(track == TRACK_4){
+        return -2;
+      }
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
+      }
+      else{
+        return 4000;
+      }
+    case 10:
+      if(track == TRACK_4){
+        return -2;
+      }
+      if(turn_side [split_counter] == 'L'){
+        return 2000;
+        split_counter ++;
+      }
+      else{
+        return 4000;
+        split_counter ++;
+      }
+    case 11:
+      if(track == TRACK_4){
+        return -2;
+      }
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
+        split_counter ++;
+      }
+      else{
+        return 4000;
+        split_counter ++;
+      }
+    case 13:
+      if(track == TRACK_4){
+        return -2;
+      }
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
+        split_counter ++;
+      }
+      else{
+        return 4000;
+        split_counter ++;
+      }
+    case 14:
+      if(track == TRACK_4){
+        return -2;
+      }
+      if((track == TRACK_1) or (track == TRACK_2) or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1) or (track == TRACK_4) or (track == TRACK_5)){
+        if(turn_side[split_counter] == 'L'){
+          return 2000;
+        }
+        else{
+          return 4000;
+        }
+      }
+      else{
+        return -1;
+      }
+    case 15:
+      if(track == TRACK_4){
+        return -2;
+      }
+      if((track == TRACK_1) or (track == TRACK_2) or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1) or (track == TRACK_4) or (track == TRACK_5)){
+        if(turn_side[split_counter] == 'L'){
+          return 1000;
+        }
+        else{
+          return 4000;
+        }
+      }
+      else{
+        return -1;
+      }
+    case 17:
+      if(track == TRACK_4){
+        return -2;
+      }
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
+        split_counter ++;
+      }
+      else{
+        return 5000;
+        split_counter ++;
+      }
+    case 18:
+      if(track == TRACK_4){
+        return -2;
+      }
+      if(turn_side[split_counter] == 'L'){
+        return 2000;
+        split_counter ++;
+      }
+      else{
+        return 5000;
+        split_counter ++;
+      }
+    case 19:
+      if(track == TRACK_4){
+        return -2;
+      }
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
+        split_counter ++;
+      }
+      else{
+        return 5000;
+        split_counter ++;
+      }
+    case 20:
+      if(track == TRACK_4){
+        return -2;
+      }
+      if(turn_side[split_counter] == 'L'){
+        return 3000;
+        split_counter ++;
+      }
+      else{
+        return 5000;
+        split_counter ++;
+      }
+    case 21:
+      if(track == TRACK_4){
+        return -2;
+      }
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
+        split_counter ++;
+      }
+      else{
+        return 5000;
+        split_counter ++;
+      }
+    case 22:
+      if(track == TRACK_4){
+        return -2;
+      }
+      if(turn_side[split_counter] == 'L'){
+        return 2000;
+        split_counter ++;
+      }
+      else{
+        return 5000;
+        split_counter ++;
+      }
+    case 23:
+      if(track == TRACK_4){
+        return -2;
+      }
+      if((track == 'TRACK_1') or (track == 'TRACK_2') or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1) or (track == TRACK_4) or (track == TRACK_5)){
+      }
+      else{
+        return -1;
+      }
+    case 25:
+      if(track == TRACK_4){
+        return -2;
+      }
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
+        split_counter ++;
+      }
+      else{
+        return 5000;
+        split_counter ++;
+      }
+    case 26:
+      if(track == TRACK_4){
+        return -2;
+      }
+      if(turn_side[split_counter] == 'L'){
+        return 2000;
+        split_counter ++;
+      }
+      else{
+        return 5000;
+        split_counter ++;
+      }
+    case 27:
+      if(track == TRACK_4){
+        return -2;
+      }
+      if(turn_side[split_counter] == 'L'){
+        return 1000;
+        split_counter ++;
+      }
+      else{
+        return 5000;
+        split_counter ++;
+      }
+      case 28:
+       if(track == TRACK_4){
+          return -2;
+        }
+        if((track == TRACK_1) or (track == TRACK_2) or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1) or (track == TRACK_4) or (track == TRACK_5)){
+          if(turn_side[split_counter] == 'L'){
+            return 3000;
+          }
+          else{
+            return 5000;
+          }
+        }
+        else{
+          return -1;
+        }
+      case 29:
+        if(track == TRACK_4){
+          return -2;
+        }
+        if((track == TRACK_1) or (track == TRACK_2) or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1) or (track == TRACK_4) or (track == TRACK_5)){
+          if(turn_side[split_counter] == 'L'){
+            return 1000;
+          }
+          else{
+            return 5000;
+          }
+        }
+        else{
+          return -1;
+        }
+      case 30:
+        if(track == TRACK_4){
+          return -2;
+        }
+        if((track == TRACK_1) or (track == TRACK_2) or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1) or (track == TRACK_4) or (track == TRACK_5)){
+          if(turn_side[split_counter] == 'L'){
+            return 2000;
+          }
+          else{
+            return 5000;
+          }
+        }
+        else{
+          return -1;
+        }
+      case 31:
+        if(track == TRACK_4){
+          return -2;
+        }
+        if((track == TRACK_1) or (track == TRACK_2) or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1) or (track == TRACK_4) or (track == TRACK_5)){
+          if(track == TRACK_4){
+            return -2;
+          }
+          if(turn_side[split_counter] == 'L'){
+            return 1000;
+          }
+          else{
+            return 5000;
+          }
+        }
+        else{
+          return -1;
+        }
+      default:
+        return -1;
+  }
 }
 
 void show_loop_time_results(){
@@ -576,10 +932,8 @@ int read_line_sensor() {
   mySerial.print(",s5_value = ");
   mySerial.println(s5_value);
 */
-  if((s1_value < S_WHITE) and (s2_value < S_WHITE) and (s3_value < S_WHITE) and (s4_value < S_WHITE) and (s5_value < S_WHITE)){
-    black_sensors = 0;
-    return -1;
-  }
+  digitalWrite(LED_BUILTIN, LOW);
+
   if(s1_value > S_WHITE){
     s1 = 1;
   }
@@ -600,14 +954,224 @@ int read_line_sensor() {
     s5 = 1;
   }
 
+  bool flag = 0;
+  int black_sensors_counter = s1 +s2 +s3 +s4 +s5;
+
+  if(black_sensors_counter == 0){
+    return -1;
+  }
   read_sensor = (s1 + (s2 * 2) + (s3 * 4) + (s4 * 8) + (s5 * 16));
   black_sensors = read_sensor;
 
-  p1 = (long) s1_value * L_s1;
-  p2 = (long) s2_value * L_s2;
-  p3 = (long) s3_value * L_s3;
-  p4 = (long) s4_value * L_s4;
-  p5 = (long) s5_value * L_s5;
+  for(int i = 0; i < 15; i++){
+    if(SPLIT_ARRAY[i] == black_sensors){
+      flag = 1;
+    }
+  }
+
+  if(flag == 1){
+    if(turn_side != N){
+      if(turn_side == R){
+        s1_value = 0;
+        s2_value = 0;
+        switch(black_sensors){
+          case 23:
+            digitalWrite(LED_BUILTIN, HIGH);
+            s3_value = 0;
+            break;
+          
+          case 22:
+            digitalWrite(LED_BUILTIN, HIGH);
+            s3_value = 0;
+            break;
+
+          case 20:
+            digitalWrite(LED_BUILTIN, HIGH);
+            s3_value = 0;
+            break;
+        }
+      }
+      else{
+        s3_value = 0;
+        s4_value = 0;
+        switch(black_sensors){
+          case 13:
+            digitalWrite(LED_BUILTIN, HIGH);
+            s3_value = 0;
+            break;
+          
+          case 29:
+            digitalWrite(LED_BUILTIN, HIGH);
+            s3_value = 0;
+            break;
+
+          case 5:
+            digitalWrite(LED_BUILTIN, HIGH);
+            s3_value = 0;
+            break;
+        }
+      }
+    /* switch(black_sensors){
+        case 5:
+          if(turn_side == L){
+
+          }
+          else{
+
+          }
+
+        case 9:
+          if(turn_side == L){
+
+          }
+          else{
+
+          }
+
+        case 10:
+          if(turn_side == L){
+
+          }
+          else{
+
+          }
+
+        case 11:
+          if(turn_side == L){
+
+          }
+          else{
+
+          }
+
+        case 13:
+          if(turn_side == L){
+
+          }
+          else{
+
+          }
+
+        case 15:
+          if(turn_side == L){
+
+          }
+          else{
+
+          }
+
+        case 17:
+          if(turn_side == L){
+
+          }
+          else{
+
+          }
+
+        case 18:
+          if(turn_side == L){
+
+          }
+          else{
+
+          }
+
+        case 19:
+          if(turn_side == L){
+
+          }
+          else{
+
+          }
+
+        case 20:
+          if(turn_side == L){
+
+          }
+          else{
+
+          }
+
+        case 21:
+          if(turn_side == L){
+
+          }
+          else{
+
+          }
+
+        case 22:
+          if(turn_side == L){
+
+          }
+          else{
+
+          }
+
+        case 23:
+          if(turn_side == L){
+
+          }
+          else{
+
+          }
+
+        case 25:
+          if(turn_side == L){
+
+          }
+          else{
+
+          }
+
+        case 26:
+          if(turn_side == L){
+
+          }
+          else{
+
+          }
+
+        case 27:
+          if(turn_side == L){
+
+          }
+          else{
+
+          }
+
+        case 29:
+          if(turn_side == L){
+
+          }
+          else{
+
+          }
+
+        case 30:
+          if(turn_side == L){
+
+          }
+          else{
+
+          }
+
+        case 31:
+          if(turn_side == L){
+
+          }
+          else{
+
+          }
+
+      }*/
+    }
+  }
+    p1 = (long) s1_value * L_s1;
+    p2 = (long) s2_value * L_s2;
+    p3 = (long) s3_value * L_s3;
+    p4 = (long) s4_value * L_s4;
+    p5 = (long) s5_value * L_s5;
 
   sum = s1_value + s2_value + s3_value + s4_value + s5_value;
 //  mySerial.print("sum = ");
@@ -723,7 +1287,7 @@ void colored_line_follow(int line_color){
 }
 
 void line_follower(){
-  uint16_t readed_color[4];
+  //uint16_t readed_color[4];
   int line_sensor_value;
   long pid;
   int motor_R_speed = 0;
