@@ -18,7 +18,7 @@
 
 #ifndef ADAFRUIT_SSD1306_H
   #define ADAFRUIT_SSD1306_H
-  #include <Adafruit_SSD1306.h>
+  #include <Adafruit_SSD1306.h> 
 #endif
 #ifndef ADAFRUIT_TCS34725_H
   #define ADAFRUIT_TCS34725_H
@@ -30,7 +30,7 @@
 #include "constants.h"
 #include "function_declarations.h"
 #include "service_functions.h"
-#include "color_sensor.h"
+#include "color_sensor_tcs34725.h"
 
 int MAX_SPEED = 80;//50
 int MIN_SPEED = 40;//60;//20
@@ -67,6 +67,7 @@ int S_MAX_ARRAY[] = {0 ,0 ,0 ,0 ,0};
 unsigned long loop_start_time;
 int loop_num = 0;
 turn_side_t turn_side = R;
+track_number_t track;
 
 SoftwareSerial mySerial(RX,TX); // RX, TX
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -101,7 +102,7 @@ void setup() {
     //Serial.println("No TCS34725 found ... check your connections");
     while (1);
   }
-
+  track = TRACK_1;
   if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3c)) { 
     digitalWrite(LED_BUILTIN,HIGH);
     while(1){
@@ -160,7 +161,7 @@ void setup() {
         break;
       }
 
-      case TRACK_1: {
+      case TRACK_NUM_1: {
         //digitalWrite( LED_BUILTIN, HIGH);
         while (1)
         {
@@ -179,8 +180,8 @@ void setup() {
       }
 
       case DEBUG_TRACK_L : {
-        int MAX_SPEED = 60;//50
-        int MIN_SPEED = 30;//60;//20
+        MAX_SPEED = 60;//50
+        MIN_SPEED = 30;//60;//20
         unsigned long start_time = millis();
         while(millis() - start_time < 20000){
           line_follower();
@@ -199,8 +200,8 @@ void setup() {
       }
 
       case DEBUG_TRACK_R : {
-        int MAX_SPEED = 60;//50
-        int MIN_SPEED = 30;//60;//20
+        MAX_SPEED = 60;//50
+        MIN_SPEED = 30;//60;//20
         unsigned long start_time = millis();
         while(millis() - start_time < 20000){
           line_follower();
@@ -356,7 +357,7 @@ String menu_num_to_str(menu_number_t item) {
     case EEPROM_2_SERIAL :
     return "EEPROM_2_SERIAL";
     
-    case TRACK_1 :
+    case TRACK_NUM_1 :
     return "TRACK_1";
     
     /*case 4 :
@@ -384,6 +385,11 @@ int split (){
     //mySerial.println(turn_side[split_counter]);
   }
  
+  if (turn_side == N) {
+    return -1;
+  }
+  
+
   switch(black_sensors){
     case 5:
 
@@ -1298,20 +1304,31 @@ void line_follower(){
   digitalWrite(LED_BUILTIN,LOW);
 
   line_sensor_value = read_line_sensor();
-  if (line_sensor_value != -1){
+
+
+  if (line_sensor_value != -1){ // line detected
     line_sensor_value-=2000;
-    final_line_sensor_value = line_sensor_value;
-    mySerial.print(" line_sensor_value = ");
-    mySerial.print(final_line_sensor_value);
-    mySerial.print(" time = ");
-    //mySerial.println(time);
+    int spl = split();
+    if(spl == -1){ // no split
+      final_line_sensor_value = line_sensor_value;
+    }
+    else { // split detected
+    if(spl == -2){ // + shaped split
+        drive_motor(RIGHT,40);
+        drive_motor(LEFT,40);
+        delay(150);
+        stop_motors();
+      }
+      final_line_sensor_value = spl - 3000;
+    }
   }
-  else {
+     
+  else{ //line not detected
     digitalWrite(LED_BUILTIN,HIGH);//if led high there is no line
-    if(Perror_old >= 0){
+    if(Perror_old >= 0){ //line lost right side
       final_line_sensor_value = 2000;
     }
-    else{
+    else{ //line lost left side
       final_line_sensor_value = -2000;
     }
     
