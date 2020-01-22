@@ -406,7 +406,7 @@ int split (){
       if(track == TRACK_4){
         return -2;
       }
-      if(turn_side[split_counter] == 'L'){
+      if(turn_side  == 'L'){
         return 1000;
       }
       else{
@@ -416,7 +416,7 @@ int split (){
       if(track == TRACK_4){
         return -2;
       }
-      if(turn_side [split_counter] == 'L'){
+      if(turn_side  == 'L'){
         return 2000;
         split_counter ++;
       }
@@ -428,7 +428,7 @@ int split (){
       if(track == TRACK_4){
         return -2;
       }
-      if(turn_side[split_counter] == 'L'){
+      if(turn_side  == 'L'){
         return 1000;
         split_counter ++;
       }
@@ -440,7 +440,7 @@ int split (){
       if(track == TRACK_4){
         return -2;
       }
-      if(turn_side[split_counter] == 'L'){
+      if(turn_side  == 'L'){
         return 1000;
         split_counter ++;
       }
@@ -453,7 +453,7 @@ int split (){
         return -2;
       }
       if((track == TRACK_1) or (track == TRACK_2) or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1) or (track == TRACK_4) or (track == TRACK_5)){
-        if(turn_side[split_counter] == 'L'){
+        if(turn_side  == 'L'){
           return 2000;
         }
         else{
@@ -468,7 +468,7 @@ int split (){
         return -2;
       }
       if((track == TRACK_1) or (track == TRACK_2) or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1) or (track == TRACK_4) or (track == TRACK_5)){
-        if(turn_side[split_counter] == 'L'){
+        if(turn_side  == 'L'){
           return 1000;
         }
         else{
@@ -482,7 +482,7 @@ int split (){
       if(track == TRACK_4){
         return -2;
       }
-      if(turn_side[split_counter] == 'L'){
+      if(turn_side  == 'L'){
         return 1000;
         split_counter ++;
       }
@@ -494,7 +494,7 @@ int split (){
       if(track == TRACK_4){
         return -2;
       }
-      if(turn_side[split_counter] == 'L'){
+      if(turn_side  == 'L'){
         return 2000;
         split_counter ++;
       }
@@ -506,7 +506,7 @@ int split (){
       if(track == TRACK_4){
         return -2;
       }
-      if(turn_side[split_counter] == 'L'){
+      if(turn_side  == 'L'){
         return 1000;
         split_counter ++;
       }
@@ -518,7 +518,7 @@ int split (){
       if(track == TRACK_4){
         return -2;
       }
-      if(turn_side[split_counter] == 'L'){
+      if(turn_side  == 'L'){
         return 3000;
         split_counter ++;
       }
@@ -530,7 +530,7 @@ int split (){
       if(track == TRACK_4){
         return -2;
       }
-      if(turn_side[split_counter] == 'L'){
+      if(turn_side  == 'L'){
         return 1000;
         split_counter ++;
       }
@@ -542,7 +542,7 @@ int split (){
       if(track == TRACK_4){
         return -2;
       }
-      if(turn_side[split_counter] == 'L'){
+      if(turn_side  == 'L'){
         return 2000;
         split_counter ++;
       }
@@ -563,7 +563,7 @@ int split (){
       if(track == TRACK_4){
         return -2;
       }
-      if(turn_side[split_counter] == 'L'){
+      if(turn_side  == 'L'){
         return 1000;
         split_counter ++;
       }
@@ -575,7 +575,7 @@ int split (){
       if(track == TRACK_4){
         return -2;
       }
-      if(turn_side[split_counter] == 'L'){
+      if(turn_side  == 'L'){
         return 2000;
         split_counter ++;
       }
@@ -587,7 +587,7 @@ int split (){
       if(track == TRACK_4){
         return -2;
       }
-      if(turn_side[split_counter] == 'L'){
+      if(turn_side  == 'L'){
         return 1000;
         split_counter ++;
       }
@@ -600,7 +600,7 @@ int split (){
           return -2;
         }
         if((track == TRACK_1) or (track == TRACK_2) or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1) or (track == TRACK_4) or (track == TRACK_5)){
-          if(turn_side[split_counter] == 'L'){
+          if(turn_side  == 'L'){
             return 3000;
           }
           else{
@@ -615,7 +615,7 @@ int split (){
           return -2;
         }
         if((track == TRACK_1) or (track == TRACK_2) or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1) or (track == TRACK_4) or (track == TRACK_5)){
-          if(turn_side[split_counter] == 'L'){
+          if(turn_side  == 'L'){
             return 1000;
           }
           else{
@@ -630,7 +630,7 @@ int split (){
           return -2;
         }
         if((track == TRACK_1) or (track == TRACK_2) or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1) or (track == TRACK_4) or (track == TRACK_5)){
-          if(turn_side[split_counter] == 'L'){
+          if(turn_side  == 'L'){
             return 2000;
           }
           else{
@@ -648,7 +648,7 @@ int split (){
           if(track == TRACK_4){
             return -2;
           }
-          if(turn_side[split_counter] == 'L'){
+          if(turn_side  == 'L'){
             return 1000;
           }
           else{

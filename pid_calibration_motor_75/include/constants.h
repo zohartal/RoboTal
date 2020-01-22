@@ -6,8 +6,6 @@ const long V_MAX_MAP_VALUE = 2000000;
 const long FACTOR_P = 1000;//650
 const long FACTOR_I = 70;//100;//57;120
 const long FACTOR_D = 1400;//380//2800
-const int MAX_SPEED = 80;//50
-const int MIN_SPEED = 40;//60;//20
 const int S_WHITE = 350;
 
 //const int BASIC_DELAY = 0;
@@ -31,6 +29,8 @@ const int CS_WHITE_TH = 500;
 const int CS_BLACK_TH = 300;
 
 const unsigned long DEBUG_LOOP_TIME = 20000;
+
+const int SPLIT_ARRAY[15] {5, 9, 10, 11, 13, 17, 18, 19, 20, 22, 23, 25, 26, 27, 29};
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
