@@ -28,6 +28,9 @@ String reg;
 String data;
 long int reg_n;
 long int data_n;
+int counter1=0;
+int counter2=0;
+int counter3=0;
 
 void loop()
 {  
@@ -77,8 +80,10 @@ void loop()
         //  switch (str) {
         //    case "w":
         //    case "W":
+        if (cmd.equals("l")) {
+          write_to_logger ( (int) reg_n, (int) data_n) 
+        }
 
-        //  }
          str = "";
          b = 0;         
          while (Serial.available() == 0) {
@@ -126,4 +131,18 @@ void handle_read( int reg){
   Serial.print(", data=");
   Serial.println(data);  
 
+}
+
+void write_to_logger (int da0,int da1) {
+  int data[5] = {da0,da1,0,counter1,counter2};
+  Wire.beginTransmission(11);  
+  for (int i = 0;i<5;i++) {
+    byte low_byte = data[i] & 0xff;
+    byte high_byte = data[i] >> 8;          
+    Wire.write(high_byte);
+    Wire.write(low_byte);
+    counter2++;
+  }
+  Wire.endTransmission();
+  counter1++;
 }
