@@ -1,9 +1,11 @@
 #include <Arduino.h>
 
+#define SD_CARD
 
 // SPI for SD card i/f
 #include <SPI.h>
 #include <SD.h>
+
 
 
 //#include "logger_register_space.h"
@@ -32,57 +34,29 @@ void setup()
   pinMode(LED, OUTPUT); 
   pinMode(SD_CS, OUTPUT);  
   
-  digitalWrite(LED, LOW);   // turn the LED on (HIGH is the voltage level)
-  delay(500); 
-   for (tmp=0; tmp<5; tmp++) {    
-      digitalWrite(LED, HIGH);  
-      delay(500); 
-      digitalWrite(LED, LOW);  
-      delay(500);   
-   }
-  
-
-     
+  Serial.begin(9600);
   #ifdef ATTINY85
     TinyWireS.begin(I2C_ADDRESS);
     TinyWireS.onReceive(receiveEvent); //data written from master to slave
     TinyWireS.onRequest(requestEvent); //data requested by the master
   #else
-    Wire.begin(4);                // join i2c bus with address #4
+    Wire.begin(I2C_ADDRESS);               
     Wire.onReceive(receiveEvent);
     Wire.onRequest(requestEvent);
   #endif
 //  Serial.println("I2C slave is up");
   led_delay = 10;
 
-  delay(500); 
-   for (tmp=0; tmp<5; tmp++) {    
-      digitalWrite(LED, HIGH);  
-      delay(100); 
-      digitalWrite(LED, LOW);  
-      delay(100);   
-   }
-
 //----   SD card reader init   -----//
   // make sure that the default chip select pin is set to
   // output, even if you don't use it:
 
-
-
+#ifdef SD_CARD
   // see if the card is present and can be initialized:
   if (!SD.begin(SD_CS)) {
     err_code = 15;
   }
 
-
-
-  delay(500); 
-   for (tmp=0; tmp<5; tmp++) {    
-      digitalWrite(LED, HIGH);  
-      delay(500); 
-      digitalWrite(LED, LOW);  
-      delay(500);   
-   }
 
   // find a new filename to use  
   while (SD.exists(filename)) {
@@ -96,9 +70,9 @@ void setup()
     dataFile.println(csv_header);
     dataFile.close();  
   }
-    
+#endif    
    delay(500); 
-   for (tmp=0; tmp<5; tmp++) {    
+   for (tmp=0; tmp<10; tmp++) {    
       digitalWrite(LED, HIGH);  
       delay(100); 
       digitalWrite(LED, LOW);  
@@ -106,24 +80,17 @@ void setup()
    }
 
   if (err_code > 0) {
-    while (1)
+    while (1){
       for (tmp=0; tmp< err_code; tmp++) {  
         digitalWrite(LED, HIGH);   // turn the LED on (HIGH is the voltage level)
-        delay(100);           
+        delay(250);           
         digitalWrite(LED, LOW);
-        delay(100);           
+        delay(250);           
       } 
       delay(5000);
+    }
   }
-
-  while (1) {
-     for (tmp=0; tmp<5; tmp++) {    
-      digitalWrite(LED, HIGH);  
-      delay(1000); 
-      digitalWrite(LED, LOW);  
-      delay(1000);   
-   }
-  }
+  Serial.println("I2C slave is up");
 } 
 
 
@@ -145,7 +112,10 @@ void receiveEvent(uint8_t howMany)
 void receiveEvent(int howMany)
 #endif
 {
-
+  unsigned long time;
+  Serial.print("I2C slave: receiveEvent. howMany=");
+  Serial.println(howMany);
+  //writeToSD(filename, "receiveEvent");
   //  sprintf(csv_row, "%lu,%d,%d,%d,%lu,%ld,%d,%s", time,x,parachute_open_code, (int)(temp*100),pres,dPa, dPa_running_avg,StateNames[state]);      
   //  writeToSD(filename, csv_row);
 
@@ -155,10 +125,15 @@ void receiveEvent(int howMany)
   }
   else {
     char csv_row[100] = "";
-    for (int i=0; i<howMany; i++) {
+    for (int i=0; i<(howMany/2); i++) {
       int st = receive_i2c_data16();
       sprintf(csv_row, "%s,%d", csv_row,st);
+      Serial.println(csv_row);
     }
+    time = millis();
+    sprintf(csv_row, "%s,%lu",csv_row, time); 
+    Serial.print("row:");
+    Serial.println(csv_row);
     writeToSD(filename, csv_row);
   }      
 }
@@ -166,6 +141,8 @@ void receiveEvent(int howMany)
 void requestEvent()
 {
   uint16_t data;
+  Serial.println("I2C slave: requestEvent");
+  //writeToSD(filename, "requestEvent");
   switch(RequestedRegister)
   {
     case 0: {    
@@ -181,6 +158,7 @@ void requestEvent()
 }
 
 void command_handler (int command) {  
+  writeToSD(filename, "command_handler");
   switch (command) {
     default: {
       break;
@@ -221,6 +199,7 @@ uint16_t receive_i2c_data16() {
 void writeToSD(char* filename, char* str) {
   // open the file. note that only one file can be open at a time,
   // so you have to close this one before opening another.
+#ifdef SD_CARD  
   File dataFile = SD.open(filename, FILE_WRITE);
 
   // if the file is available, write to it:
@@ -230,5 +209,6 @@ void writeToSD(char* filename, char* str) {
   }
   // if the file isn't open, pop up an error:
   else {   
-  }       
+  }  
+#endif     
 }

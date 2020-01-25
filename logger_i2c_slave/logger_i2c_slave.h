@@ -18,10 +18,10 @@ void writeToSD(char* filename, char* str);
 
 const int I2C_ADDRESS = 11;
 const int SD_CS = 10;
-const int LED = 13;
+const int LED = 2;
 
 int filename_idx = 0;
 char filename[11] = "log000.csv";
 
-char csv_header[100] = "time[ms],line_sensor_value";
+char csv_header[100] = "empty,f1,f2,f3,f4,f5,time[ms]";
 char csv_row[100] = "";
