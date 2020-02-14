@@ -700,30 +700,6 @@ void automatic_calibration(){
           stop_motors();
           delay(50);
         }  
-       /* if(((time_diff>990)and(time_diff<1010))){
-          drive_motor(LEFT,30);
-          drive_motor(RIGHT,30);
-          delay(50);
-          stop_motors();
-        }
-        if(((time_diff>1990)and(time_diff<2010))){
-          drive_motor(LEFT,-30);
-          drive_motor(RIGHT,-30);
-          delay(50);
-          stop_motors();
-        }   
-        if(((time_diff>2990)and(time_diff<3010))){
-          drive_motor(LEFT,50);
-          drive_motor(RIGHT,30);
-          delay(50);
-          stop_motors();
-        } 
-        if(((time_diff>3990)and(time_diff<4010))){
-          drive_motor(LEFT,-30);
-          drive_motor(RIGHT,-30);
-          delay(50);
-          stop_motors();
-        }*/
       }
     }
 
@@ -972,6 +948,7 @@ int read_line_sensor() {
   for(int i = 0; i < 15; i++){
     if(SPLIT_ARRAY[i] == black_sensors){
       flag = 1;
+      break;
     }
   }
 
@@ -998,7 +975,7 @@ int read_line_sensor() {
         }
       }
       else{
-        s3_value = 0;
+        s5_value = 0;
         s4_value = 0;
         switch(black_sensors){
           case 13:
@@ -1298,6 +1275,8 @@ void line_follower(){
   long pid;
   int motor_R_speed = 0;
   int motor_L_speed = 0;
+  int spl;
+  bool flag = 0;
   //int split_number = 0;
   
 
@@ -1308,21 +1287,21 @@ void line_follower(){
 
   if (line_sensor_value != -1){ // line detected
     line_sensor_value-=2000;
-    int spl = split();
+   /* spl = split();
     if(spl == -1){ // no split
       final_line_sensor_value = line_sensor_value;
     }
     else { // split detected
-    if(spl == -2){ // + shaped split
-        drive_motor(RIGHT,40);
-        drive_motor(LEFT,40);
-        delay(150);
-        stop_motors();
+      if(spl == -2){ // + shaped split
+          drive_motor(RIGHT,40);
+          drive_motor(LEFT,40);
+          delay(150);
+          stop_motors();
       }
       final_line_sensor_value = spl - 3000;
-    }
-  }
-     
+    }*/
+    final_line_sensor_value = line_sensor_value;
+  }   
   else{ //line not detected
     digitalWrite(LED_BUILTIN,HIGH);//if led high there is no line
     if(Perror_old >= 0){ //line lost right side
@@ -1385,8 +1364,39 @@ void line_follower(){
     
   }
 */
+for(int i = 0; i < 15; i++){
+    if(SPLIT_ARRAY[i] == black_sensors){
+      flag = 1;
+      break;
+    }
+  }
+  write_to_logger(black_sensors, final_line_sensor_value, flag);
+
   drive_motor(RIGHT, motor_R_speed);
   drive_motor(LEFT, motor_L_speed);
 
   loop_num++;
+}
+
+void write_to_logger(int d1, int d2, int d3) {
+  byte low_byte;
+  byte high_byte;
+  Wire.beginTransmission(LOGGER_I2C_ADDRESS);  
+  
+  low_byte  = d1 & 0xff;
+  high_byte = d1 >> 8;          
+  Wire.write(high_byte);
+  Wire.write(low_byte);
+  
+  low_byte  = d2 & 0xff;
+  high_byte = d2 >> 8;          
+  Wire.write(high_byte);
+  Wire.write(low_byte);
+
+  low_byte  = d3 & 0xff;
+  high_byte = d3 >> 8;          
+  Wire.write(high_byte);
+  Wire.write(low_byte);
+
+  Wire.endTransmission();
 }

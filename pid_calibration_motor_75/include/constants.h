@@ -1,4 +1,5 @@
 // CONSTANTS //
+const int LOGGER_I2C_ADDRESS = 11;
 
 // PID parameters //
 const long V_MAX_MAP_VALUE = 2000000;
