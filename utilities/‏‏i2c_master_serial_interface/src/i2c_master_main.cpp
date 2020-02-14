@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <Wire.h>
-#include "cs01_register_space.h"
+//#include "cs01_register_space.h"
 #include "i2c_master_main.h"
 
 void setup()
@@ -34,6 +34,7 @@ int counter3=0;
 
 void loop()
 {  
+  int data_list[2];
   if ((Serial.available() > 0) && (b != '\n')) {
     // get incoming byte:
     b = Serial.read();
@@ -81,7 +82,9 @@ void loop()
         //    case "w":
         //    case "W":
         if (cmd.equals("l")) {
-          write_to_logger ( (int) reg_n, (int) data_n) 
+          data_list[0] = (int) reg_n;
+          data_list[1] = (int) data_n;
+          write_to_logger (data_list,2) ;
         }
 
          str = "";
@@ -133,16 +136,23 @@ void handle_read( int reg){
 
 }
 
-void write_to_logger (int da0,int da1) {
-  int data[5] = {da0,da1,0,counter1,counter2};
-  Wire.beginTransmission(11);  
-  for (int i = 0;i<5;i++) {
-    byte low_byte = data[i] & 0xff;
-    byte high_byte = data[i] >> 8;          
+void write_to_logger (int data_list[],int length) {
+  // Serial.println("write_to_logger(): start");
+  Wire.beginTransmission(LOGGER_I2C_ADDRESS);  
+  // Serial.println("write_to_logger() 1");
+  for (int i = 0;i<length;i++) {    
+    Serial.print("write_to_logger() low=");
+    byte low_byte = data_list[i] & 0xff;
+    byte high_byte = data_list[i] >> 8;          
+    Serial.print(low_byte);
+    Serial.print(", high=");
+    Serial.println(high_byte);
     Wire.write(high_byte);
     Wire.write(low_byte);
     counter2++;
+
   }
+  //int time = millis();
   Wire.endTransmission();
   counter1++;
 }
