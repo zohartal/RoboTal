@@ -4,9 +4,9 @@ const int LOGGER_I2C_ADDRESS = 11;
 // PID parameters //
 const long V_MAX_MAP_VALUE = 2000000;
 //const long TURN_FACTOR = 20000;//59000
-const long FACTOR_P = 1000;//650
+const long FACTOR_P = 900;//650
 const long FACTOR_I = 70;//100;//57;120
-const long FACTOR_D = 1400;//380//2800
+const long FACTOR_D = 1500;//380//2800
 const int S_WHITE = 350;
 
 //const int BASIC_DELAY = 0;

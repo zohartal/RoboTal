@@ -14,3 +14,4 @@ String menu_num_to_str(menu_number_t item);
 menu_number_t update_menu_item (menu_number_t item_number);
 void line_follower();
 void write_to_logger(int d1, int d2, int d3);
+void split_handler ();

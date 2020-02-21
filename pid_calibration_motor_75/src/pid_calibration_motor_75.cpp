@@ -1169,6 +1169,21 @@ int read_line_sensor() {
   return line;
 }
 
+void split_handler (){
+  drive_motor(RIGHT,50);
+  drive_motor(LEFT,50);
+  delay(5000);
+  if(turn_side == R){
+    stop_motors();
+    drive_motor(RIGHT,50);
+  }
+  else{
+    stop_motors();
+    drive_motor(LEFT,50);
+  }
+  delay(5000);
+}
+
 void init_line_sensor() {
 
   pinMode(S1,INPUT);
@@ -1283,50 +1298,58 @@ void line_follower(){
   digitalWrite(LED_BUILTIN,LOW);
 
   line_sensor_value = read_line_sensor();
-
-
-  if (line_sensor_value != -1){ // line detected
-    line_sensor_value-=2000;
-   /* spl = split();
-    if(spl == -1){ // no split
-      final_line_sensor_value = line_sensor_value;
-    }
-    else { // split detected
-      if(spl == -2){ // + shaped split
-          drive_motor(RIGHT,40);
-          drive_motor(LEFT,40);
-          delay(150);
-          stop_motors();
+  for(int i = 0; i < 15; i++){
+      if(SPLIT_ARRAY[i] == black_sensors){
+        flag = 1;
+        break;
       }
-      final_line_sensor_value = spl - 3000;
-    }*/
-    final_line_sensor_value = line_sensor_value;
-  }   
-  else{ //line not detected
-    digitalWrite(LED_BUILTIN,HIGH);//if led high there is no line
-    if(Perror_old >= 0){ //line lost right side
-      final_line_sensor_value = 2000;
     }
-    else{ //line lost left side
-      final_line_sensor_value = -2000;
+  if((turn_side != N) or (flag = 0)){
+    if (line_sensor_value != -1){ // line detected
+      line_sensor_value-=2000;
+    /* spl = split();
+      if(spl == -1){ // no split
+        final_line_sensor_value = line_sensor_value;
+      }
+      else { // split detected
+        if(spl == -2){ // + shaped split
+            drive_motor(RIGHT,40);
+            drive_motor(LEFT,40);
+            delay(150);
+            stop_motors();
+        }
+        final_line_sensor_value = spl - 3000;
+      }*/
+      final_line_sensor_value = line_sensor_value;
+    }   
+    else{ //line not detected
+      digitalWrite(LED_BUILTIN,HIGH);//if led high there is no line
+      if(Perror_old >= 0){ //line lost right side
+        final_line_sensor_value = 2000;
+      }
+      else{ //line lost left side
+        final_line_sensor_value = -2000;
+      }
+      
     }
-    
-  }
-  pid = PID(final_line_sensor_value,Perror_old);
-  pid = constrain(pid,-V_MAX_MAP_VALUE,V_MAX_MAP_VALUE);
-  Perror_old = final_line_sensor_value;
+    pid = PID(final_line_sensor_value,Perror_old);
+    pid = constrain(pid,-V_MAX_MAP_VALUE,V_MAX_MAP_VALUE);
+    Perror_old = final_line_sensor_value;
 
-  //unsigned long abs_pid = long_abs(pid);
+    //unsigned long abs_pid = long_abs(pid);
 
-  if(pid > 0){
-    motor_L_speed = map(pid, 0, V_MAX_MAP_VALUE, MAX_SPEED, MIN_SPEED);
-    motor_R_speed = map(pid, 0, V_MAX_MAP_VALUE, MAX_SPEED, -MIN_SPEED);
+    if(pid > 0){
+      motor_L_speed = map(pid, 0, V_MAX_MAP_VALUE, MAX_SPEED, MIN_SPEED);
+      motor_R_speed = map(pid, 0, V_MAX_MAP_VALUE, MAX_SPEED, -MIN_SPEED);
+    }
+    else{
+      motor_R_speed = map(pid, 0, -V_MAX_MAP_VALUE, MAX_SPEED, MIN_SPEED);
+      motor_L_speed = map(pid, 0, -V_MAX_MAP_VALUE, MAX_SPEED, -MIN_SPEED);
+    }
   }
   else{
-    motor_R_speed = map(pid, 0, -V_MAX_MAP_VALUE, MAX_SPEED, MIN_SPEED);
-    motor_L_speed = map(pid, 0, -V_MAX_MAP_VALUE, MAX_SPEED, -MIN_SPEED);
+    split_handler();
   }
-
 
 #ifdef SERIAL_ON
 
@@ -1364,12 +1387,7 @@ void line_follower(){
     
   }
 */
-for(int i = 0; i < 15; i++){
-    if(SPLIT_ARRAY[i] == black_sensors){
-      flag = 1;
-      break;
-    }
-  }
+
   write_to_logger(black_sensors, final_line_sensor_value, flag);
 
   drive_motor(RIGHT, motor_R_speed);
