@@ -32,7 +32,7 @@
 #include "service_functions.h"
 #include "color_sensor_tcs34725.h"
 
-int MAX_SPEED = 80;//50
+int MAX_SPEED =60;//50
 int MIN_SPEED = 40;//60;//20
 
 uint16_t color_min[4] = {0, 0, 0, 0};
@@ -1170,9 +1170,10 @@ int read_line_sensor() {
 }
 
 void split_handler (){
+  digitalWrite(LED_BUILTIN, HIGH);
   drive_motor(RIGHT,50);
   drive_motor(LEFT,50);
-  delay(5000);
+  delay(80);
   if(turn_side == R){
     stop_motors();
     drive_motor(RIGHT,50);
@@ -1181,7 +1182,10 @@ void split_handler (){
     stop_motors();
     drive_motor(LEFT,50);
   }
-  delay(5000);
+  delay(60);
+  stop_motors();
+  write_to_logger(-1,0,0);
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
 void init_line_sensor() {
@@ -1304,7 +1308,7 @@ void line_follower(){
         break;
       }
     }
-  if((turn_side != N) or (flag = 0)){
+  if((turn_side == N) or (flag == 0)){
     if (line_sensor_value != -1){ // line detected
       line_sensor_value-=2000;
     /* spl = split();
@@ -1390,8 +1394,7 @@ void line_follower(){
 
   write_to_logger(black_sensors, final_line_sensor_value, flag);
 
-  drive_motor(RIGHT, motor_R_speed);
-  drive_motor(LEFT, motor_L_speed);
+  drive_motor(RIGHT, motor_L_speed);
 
   loop_num++;
 }
