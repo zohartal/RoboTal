@@ -32,7 +32,7 @@
 #include "service_functions.h"
 #include "color_sensor_tcs34725.h"
 
-int MAX_SPEED =60;//50
+int MAX_SPEED = 60;//50
 int MIN_SPEED = 40;//60;//20
 
 uint16_t color_min[4] = {0, 0, 0, 0};
@@ -69,9 +69,9 @@ int loop_num = 0;
 turn_side_t turn_side = R;
 track_number_t track;
 
-SoftwareSerial mySerial(RX,TX); // RX, TX
+//SoftwareSerial mySerial(RX,TX); // RX, TX
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_24MS, TCS34725_GAIN_1X);
+// Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_24MS, TCS34725_GAIN_1X);
 
 void setup() {
 
@@ -87,34 +87,17 @@ void setup() {
   pinMode( BUTTON, INPUT_PULLUP );
   pinMode( BUTTON2, INPUT_PULLUP );
 
-  pinMode( TX, OUTPUT );
-  pinMode( RX, INPUT );
+  //pinMode( TX, OUTPUT );
+  //pinMode( RX, INPUT );
+  
+  
 
   stop_motors();
   //stop_motor(LEFT);
 
-  mySerial.begin(38400);
-  mySerial.println("start");
+  //mySerial.begin(38400);
+  //mySerial.println("start");
 
-  if (tcs.begin()) {
-    //Serial.println("Found sensor");
-  } else {
-    //Serial.println("No TCS34725 found ... check your connections");
-    while (1);
-  }
-  track = TRACK_1;
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3c)) { 
-    digitalWrite(LED_BUILTIN,HIGH);
-    while(1){
-      delay(1);
-    }
-  }
-  display.clearDisplay();
-  display.display();
-  display.setTextColor(WHITE);
-  display.setCursor(0, 0); 
-  display.println("start. ");
-  display.display();
   
   digitalWrite(LED_BUILTIN,HIGH);
   delay(500);
@@ -123,6 +106,23 @@ void setup() {
   digitalWrite(LED_BUILTIN,HIGH);
   delay(500);
   digitalWrite(LED_BUILTIN,LOW);
+
+  track = TRACK_1;
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3c)) { 
+    digitalWrite(LED_BUILTIN,HIGH);
+    while(1){
+      delay(1);
+    }
+  }
+
+
+  display.clearDisplay();
+  display.display();
+  display.setTextColor(WHITE);
+  display.setCursor(0, 0); 
+  display.println("start. ");
+  display.display();
+
   while(1){
     while(digitalRead (BUTTON) == HIGH){
       if(digitalRead (BUTTON2) == LOW){
@@ -180,8 +180,8 @@ void setup() {
       }
 
       case DEBUG_TRACK_L : {
-        MAX_SPEED = 60;//50
-        MIN_SPEED = 30;//60;//20
+        // MAX_SPEED = 60;//50
+        // MIN_SPEED = 30;//60;//20
         unsigned long start_time = millis();
         while(millis() - start_time < 20000){
           line_follower();
@@ -200,8 +200,8 @@ void setup() {
       }
 
       case DEBUG_TRACK_R : {
-        MAX_SPEED = 60;//50
-        MIN_SPEED = 30;//60;//20
+        // MAX_SPEED = 60;//50
+        // MIN_SPEED = 30;//60;//20
         unsigned long start_time = millis();
         while(millis() - start_time < 20000){
           line_follower();
@@ -896,11 +896,11 @@ int read_line_sensor() {
   mySerial.println(s5_value);
 */
 
-  s1_value = map(s1_value,S_MIN_ARRAY[0],S_MAX_ARRAY[0],0,1000);
-  s2_value = map(s2_value,S_MIN_ARRAY[1],S_MAX_ARRAY[1],0,1000);
-  s3_value = map(s3_value,S_MIN_ARRAY[2],S_MAX_ARRAY[2],0,1000);
-  s4_value = map(s4_value,S_MIN_ARRAY[3],S_MAX_ARRAY[3],0,1000);
-  s5_value = map(s5_value,S_MIN_ARRAY[4],S_MAX_ARRAY[4],0,1000);
+  s1_value = map(s1_value,S_MIN_ARRAY[0],S_MAX_ARRAY[0],1000,0);
+  s2_value = map(s2_value,S_MIN_ARRAY[1],S_MAX_ARRAY[1],1000,0);
+  s3_value = map(s3_value,S_MIN_ARRAY[2],S_MAX_ARRAY[2],1000,0);
+  s4_value = map(s4_value,S_MIN_ARRAY[3],S_MAX_ARRAY[3],1000,0);
+  s5_value = map(s5_value,S_MIN_ARRAY[4],S_MAX_ARRAY[4],1000,0);
   
 /*
   mySerial.print("after map: s1_value = ");
@@ -1184,7 +1184,7 @@ void split_handler (){
   }
   delay(60);
   stop_motors();
-  write_to_logger(-1,0,0);
+  write_to_logger(-1,0,0,0,0);
   digitalWrite(LED_BUILTIN, LOW);
 }
 
@@ -1211,11 +1211,11 @@ int motor_speed_map(int spd){
 }
 
 void stop_motors ( ) {
-  digitalWrite( MOTOR_A_PWM, HIGH );
+  digitalWrite( MOTOR_A_PWM, LOW );
   digitalWrite( MOTOR_A_DIR1, LOW );
   digitalWrite( MOTOR_A_DIR2, LOW );
 
-  digitalWrite( MOTOR_B_PWM, HIGH );
+  digitalWrite( MOTOR_B_PWM, LOW );
   digitalWrite( MOTOR_B_DIR1, LOW );
   digitalWrite( MOTOR_B_DIR2, LOW );  
 }
@@ -1277,15 +1277,15 @@ long long_abs(long x){
 
 void colored_line_follow(int line_color){
   uint16_t readed_color[4];
-  tcs.getRawData(&readed_color[RED], &readed_color[GREEN], &readed_color[BLUE], &readed_color[C]);
-  if(map (readed_color[line_color], color_min[line_color], color_max[line_color], 0, 1000) > 400){
-    drive_motor(LEFT, 20);
-    drive_motor(RIGHT, 0);
-  }
-  else{
-    drive_motor(LEFT, 0);
-    drive_motor(RIGHT, 20);
-  }
+  // tcs.getRawData(&readed_color[RED], &readed_color[GREEN], &readed_color[BLUE], &readed_color[C]);
+  // if(map (readed_color[line_color], color_min[line_color], color_max[line_color], 0, 1000) > 400){
+  //   drive_motor(LEFT, 20);
+  //   drive_motor(RIGHT, 0);
+  // }
+  // else{
+  //   drive_motor(LEFT, 0);
+  //   drive_motor(RIGHT, 20);
+  // }
 }
 
 void line_follower(){
@@ -1294,7 +1294,7 @@ void line_follower(){
   long pid;
   int motor_R_speed = 0;
   int motor_L_speed = 0;
-  int spl;
+  // int spl;
   bool flag = 0;
   //int split_number = 0;
   
@@ -1308,7 +1308,7 @@ void line_follower(){
         break;
       }
     }
-  if((turn_side == N) or (flag == 0)){
+  // if((turn_side == N) or (flag == 0)){
     if (line_sensor_value != -1){ // line detected
       line_sensor_value-=2000;
     /* spl = split();
@@ -1350,10 +1350,10 @@ void line_follower(){
       motor_R_speed = map(pid, 0, -V_MAX_MAP_VALUE, MAX_SPEED, MIN_SPEED);
       motor_L_speed = map(pid, 0, -V_MAX_MAP_VALUE, MAX_SPEED, -MIN_SPEED);
     }
-  }
-  else{
-    split_handler();
-  }
+  // }
+  // else{
+  //   split_handler();
+  // }
 
 #ifdef SERIAL_ON
 
@@ -1392,14 +1392,15 @@ void line_follower(){
   }
 */
 
-  write_to_logger(black_sensors, final_line_sensor_value, flag);
+  write_to_logger(black_sensors, final_line_sensor_value, pid, motor_R_speed, motor_L_speed);
 
-  drive_motor(RIGHT, motor_L_speed);
+  drive_motor(RIGHT, motor_R_speed);
+  drive_motor(LEFT, motor_L_speed);
 
   loop_num++;
 }
 
-void write_to_logger(int d1, int d2, int d3) {
+void write_to_logger(int d1, int d2, int d3, int d4, int d5) {
   byte low_byte;
   byte high_byte;
   Wire.beginTransmission(LOGGER_I2C_ADDRESS);  
@@ -1416,6 +1417,16 @@ void write_to_logger(int d1, int d2, int d3) {
 
   low_byte  = d3 & 0xff;
   high_byte = d3 >> 8;          
+  Wire.write(high_byte);
+  Wire.write(low_byte);
+
+  low_byte  = d4 & 0xff;
+  high_byte = d4 >> 8;          
+  Wire.write(high_byte);
+  Wire.write(low_byte);
+  
+  low_byte  = d5 & 0xff;
+  high_byte = d5 >> 8;          
   Wire.write(high_byte);
   Wire.write(low_byte);
 
