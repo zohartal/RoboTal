@@ -32,8 +32,8 @@
 #include "service_functions.h"
 #include "color_sensor_tcs34725.h"
 
-int MAX_SPEED = 60;//50
-int MIN_SPEED = 40;//60;//20
+int MAX_SPEED = 40;//50
+int MIN_SPEED = 20;//60;//20
 
 uint16_t color_min[4] = {0, 0, 0, 0};
 uint16_t color_max[4] = {0, 0, 0, 0};
@@ -48,7 +48,8 @@ uint16_t readed_color[4];
 void colored_line_follow(int line_color);
 //void color_sensor_calibration(Adafruit_TCS34725 tcs, Adafruit_SSD1306 display);
 
-
+int motor_l_cnt = 0;
+int motor_r_cnt = 0;
 
 
 char string_for_display[4];
@@ -107,6 +108,9 @@ void setup() {
   delay(500);
   digitalWrite(LED_BUILTIN,LOW);
 
+  attachInterrupt(digitalPinToInterrupt(ENC_A_INT), motor_r_interrupt, RISING);
+  attachInterrupt(digitalPinToInterrupt(ENC_B_INT), motor_l_interrupt, RISING);
+
   track = TRACK_1;
   if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3c)) { 
     digitalWrite(LED_BUILTIN,HIGH);
@@ -122,6 +126,12 @@ void setup() {
   display.setCursor(0, 0); 
   display.println("start. ");
   display.display();
+
+  const int motor_l_start = 0;//motor_l_cnt;
+  const int motor_r_start = 0;//motor_r_cnt;
+
+  drive_motor(LEFT, 20);
+  drive_motor(RIGHT, 20);
 
   while(1){
     while(digitalRead (BUTTON) == HIGH){
@@ -945,6 +955,31 @@ int read_line_sensor() {
   read_sensor = (s1 + (s2 * 2) + (s3 * 4) + (s4 * 8) + (s5 * 16));
   black_sensors = read_sensor;
 
+    display.clearDisplay();
+    display.setCursor(0, 0);
+
+    display.print ("s1: ");
+    sprintf(string_for_display,"%03d ",s1_value);
+    display.print(string_for_display);
+    
+    display.print ("s2: ");
+    sprintf(string_for_display,"%03d ",s2_value);
+    display.print(string_for_display);
+    
+    display.print ("s3: ");
+    sprintf(string_for_display,"%03d ",s3_value);
+    display.print(string_for_display);
+    
+    display.print ("s4: ");
+    sprintf(string_for_display,"%03d ",s4_value);
+    display.print(string_for_display);
+    
+    display.print ("s5: ");
+    sprintf(string_for_display,"%03d ",s5_value);
+    display.print(string_for_display);
+    
+    display.display();
+
   for(int i = 0; i < 15; i++){
     if(SPLIT_ARRAY[i] == black_sensors){
       flag = 1;
@@ -1303,11 +1338,12 @@ void line_follower(){
 
   line_sensor_value = read_line_sensor();
   for(int i = 0; i < 15; i++){
-      if(SPLIT_ARRAY[i] == black_sensors){
-        flag = 1;
-        break;
-      }
+    if(SPLIT_ARRAY[i] == black_sensors){
+      flag = 1;
+      break;
     }
+  }
+  
   // if((turn_side == N) or (flag == 0)){
     if (line_sensor_value != -1){ // line detected
       line_sensor_value-=2000;
@@ -1431,4 +1467,23 @@ void write_to_logger(int d1, int d2, int d3, int d4, int d5) {
   Wire.write(low_byte);
 
   Wire.endTransmission();
+}
+void motor_r_interrupt() {
+  int b = digitalRead(ENC_A_VAL);
+  if (b == HIGH) {
+    motor_r_cnt++;
+  }
+  else {
+    motor_r_cnt--;
+  }
+}
+
+void motor_l_interrupt() {
+  int b = digitalRead(ENC_B_VAL);
+  if (b == HIGH) {
+    motor_l_cnt++;
+  }
+  else {
+    motor_l_cnt--;
+  }
 }

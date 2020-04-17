@@ -15,3 +15,5 @@ menu_number_t update_menu_item (menu_number_t item_number);
 void line_follower();
 void write_to_logger(int d1, int d2, int d3, int d4, int d5);
 void split_handler ();
+void motor_l_interrupt();
+void motor_r_interrupt();
