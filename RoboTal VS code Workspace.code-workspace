@@ -6,6 +6,10 @@
         {
             "name": "Logger",
             "path": "Logger\\Logger"
+        },
+        {
+            "name": "pid_calibration_motor_75",
+            "path": "pid_calibration_motor_75"
         }
     ]
 }

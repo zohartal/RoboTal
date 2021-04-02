@@ -20,17 +20,17 @@
   #define ADAFRUIT_SSD1306_H
   #include <Adafruit_SSD1306.h> 
 #endif
-#ifndef ADAFRUIT_TCS34725_H
-  #define ADAFRUIT_TCS34725_H
-  #include <Adafruit_TCS34725.h>
-#endif
+// #ifndef ADAFRUIT_TCS34725_H
+//   #define ADAFRUIT_TCS34725_H
+//    #include <Adafruit_TCS34725.h>
+// #endif
 #include <SoftwareSerial.h>
 #include "typedefs.h"
 #include "pinout.h"
 #include "constants.h"
 #include "function_declarations.h"
 #include "service_functions.h"
-#include "color_sensor_tcs34725.h"
+// #include "color_sensor_tcs34725.h"
 
 int MAX_SPEED = 40;//50
 int MIN_SPEED = 20;//60;//20

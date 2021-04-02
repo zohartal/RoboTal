@@ -75,7 +75,7 @@ void setup()
   delay(500);   
 
   if (err_code > 0) {
-    while (1)
+    while (1) {
       for (int tmp=0; tmp< err_code; tmp++) {  
         digitalWrite(LED, HIGH);   // turn the LED on (HIGH is the voltage level)
         delay(100);           
@@ -83,6 +83,7 @@ void setup()
         delay(100);           
       } 
       delay(5000);
+    }
   }
 } 
 
