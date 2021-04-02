@@ -127,8 +127,8 @@ void setup() {
   display.println("start. ");
   display.display();
 
-  const int motor_l_start = 0;//motor_l_cnt;
-  const int motor_r_start = 0;//motor_r_cnt;
+ // const int motor_l_start = 0;//motor_l_cnt;
+ // const int motor_r_start = 0;//motor_r_cnt;
 
   drive_motor(LEFT, 20);
   drive_motor(RIGHT, 20);
@@ -244,95 +244,6 @@ void setup() {
 
 void loop() {
   line_follower();
-  // put your main code here, to run repeatedly:
- /* uint16_t readed_color[4];
-  int line_sensor_value;
-  long pid;
-  int motor_R_speed = 0;
-  int motor_L_speed = 0;
-  //int split_number = 0;
-  
-
-  digitalWrite(LED_BUILTIN,LOW);
-
-  line_sensor_value = read_line_sensor();
-  if (line_sensor_value != -1){
-    line_sensor_value-=2000;
-    final_line_sensor_value = line_sensor_value;
-    mySerial.print(" line_sensor_value = ");
-    mySerial.print(final_line_sensor_value);
-    mySerial.print(" time = ");
-    //mySerial.println(time);
-  }
-  else {
-    digitalWrite(LED_BUILTIN,HIGH);//if led high there is no line
-    if(Perror_old >= 0){
-      final_line_sensor_value = 2000;
-    }
-    else{
-      final_line_sensor_value = -2000;
-    }
-    
-  }
-  pid = PID(final_line_sensor_value,Perror_old);
-  pid = constrain(pid,-V_MAX_MAP_VALUE,V_MAX_MAP_VALUE);
-  Perror_old = final_line_sensor_value;
-
-  //unsigned long abs_pid = long_abs(pid);
-
-  if(pid > 0){
-    motor_L_speed = map(pid, 0, V_MAX_MAP_VALUE, MAX_SPEED, MIN_SPEED);
-    motor_R_speed = map(pid, 0, V_MAX_MAP_VALUE, MAX_SPEED, -MIN_SPEED);
-  }
-  else{
-    motor_R_speed = map(pid, 0, -V_MAX_MAP_VALUE, MAX_SPEED, MIN_SPEED);
-    motor_L_speed = map(pid, 0, -V_MAX_MAP_VALUE, MAX_SPEED, -MIN_SPEED);
-  }
-
-
-#ifdef SERIAL_ON
-
-  
-  //time = millis();
-  mySerial.print(", v= ");
- // mySerial.print(v);
-
-  sprintf(string_for_myserial,"%ld",pid);
-  mySerial.print(", pid= ");
-  mySerial.print(string_for_myserial);
-
- 
-  sprintf(string_for_myserial,"%ld",abs_pid);
-  mySerial.print(", |pid|= ");
-  mySerial.print(string_for_myserial);
-       
-  //mySerial.print(", vm= ");
-  mySerial.print(vm);
-
-  mySerial.print (" R = ");
-  mySerial.print (motor_R_speed);
-
-  mySerial.print (" L = ");
-  mySerial.println (motor_L_speed);
-  
-#endif
-
-  /*tcs.getRawData(&readed_color[RED], &readed_color[GREEN], &readed_color[BLUE], &readed_color[C]);
-  if(((map( readed_color[BLUE], color_min[BLUE], color_max[BLUE], 0, 1000) > CS_BLACK_TH) and (map( readed_color[BLUE], color_min[BLUE], color_max[BLUE], 0, 1000) < CS_WHITE_TH))and(map( readed_color[RED], color_min[RED], color_max[RED], 0, 1000) > 500)){
-    stop_motors();
-    while (1){
-      delay(1);
-    }
-    
-  }
-
-  drive_motor(RIGHT, motor_R_speed);
-  drive_motor(LEFT, motor_L_speed);
-*/
- /* loop_num++;
-  if(millis() - loop_start_time >= DEBUG_LOOP_TIME){
-    show_loop_time_results();
-  }*/
 }
 
 menu_number_t update_menu_item (menu_number_t item_number){
@@ -404,7 +315,7 @@ int split (){
     case 5:
 
     case 7:
-      if((track == 'TRACK_1') or (track == 'TRACK_2') or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1) or (track == TRACK_4) or (track == TRACK_5)){
+      if((track == TRACK_1) or (track == TRACK_2) or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1) or (track == TRACK_4) or (track == TRACK_5)){
         if(track == TRACK_4){
           return -2;
         }
@@ -570,7 +481,7 @@ int split (){
       if(track == TRACK_4){
         return -2;
       }
-      if((track == 'TRACK_1') or (track == 'TRACK_2') or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1) or (track == TRACK_4) or (track == TRACK_5)){
+      if((track == TRACK_1) or (track == TRACK_2) or (track == TRACK_3_TEAM_A_TYPE_1) or (track == TRACK_3_TEAM_B_TYPE_1) or (track == TRACK_4) or (track == TRACK_5)){
       }
       else{
         return -1;
@@ -1311,7 +1222,7 @@ long long_abs(long x){
 }
 
 void colored_line_follow(int line_color){
-  uint16_t readed_color[4];
+  // uint16_t readed_color[4];
   // tcs.getRawData(&readed_color[RED], &readed_color[GREEN], &readed_color[BLUE], &readed_color[C]);
   // if(map (readed_color[line_color], color_min[line_color], color_max[line_color], 0, 1000) > 400){
   //   drive_motor(LEFT, 20);
