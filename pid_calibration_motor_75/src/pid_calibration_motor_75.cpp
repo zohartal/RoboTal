@@ -32,8 +32,8 @@
 #include "service_functions.h"
 // #include "color_sensor_tcs34725.h"
 
-int MAX_SPEED = 40;//50
-int MIN_SPEED = 20;//60;//20
+// int MAX_SPEED = 40;//50
+// int MIN_SPEED = 20;//60;//20
 
 uint16_t color_min[4] = {0, 0, 0, 0};
 uint16_t color_max[4] = {0, 0, 0, 0};
@@ -130,8 +130,7 @@ void setup() {
  // const int motor_l_start = 0;//motor_l_cnt;
  // const int motor_r_start = 0;//motor_r_cnt;
 
-  drive_motor(LEFT, 20);
-  drive_motor(RIGHT, 20);
+  total_error = 0;
 
   while(1){
     while(digitalRead (BUTTON) == HIGH){
@@ -147,29 +146,29 @@ void setup() {
       }
     }
     switch(item_number) {
-      case EEPROM_2_SERIAL : {
-        eeprom_2_serial();
-        break;
-      }
+      // case EEPROM_2_SERIAL : {
+      //   eeprom_2_serial();
+      //   break;
+      // }
 
-      case EEPROM_DEBUG_TRACK : {
-        for (int i =0;i<20;i++){
-          digitalWrite(LED_BUILTIN,HIGH);
-          delay(200);
-          digitalWrite(LED_BUILTIN,LOW);
-          delay(200);
-        }
-        uint16_t addr = 0;
-        while(addr < (uint16_t)(((int)EEPROM.length() -1))){
-          line_follower();
-          EEPROMWriteInt(addr, addr);
-          addr = addr + 2;
-          EEPROMWriteInt(addr, black_sensors);
-          addr = addr + 2;
-        }
-        show_loop_time_results();
-        break;
-      }
+      // case EEPROM_DEBUG_TRACK : {
+      //   for (int i =0;i<20;i++){
+      //     digitalWrite(LED_BUILTIN,HIGH);
+      //     delay(200);
+      //     digitalWrite(LED_BUILTIN,LOW);
+      //     delay(200);
+      //   }
+      //   uint16_t addr = 0;
+      //   while(addr < (uint16_t)(((int)EEPROM.length() -1))){
+      //     line_follower();
+      //     EEPROMWriteInt(addr, addr);
+      //     addr = addr + 2;
+      //     EEPROMWriteInt(addr, black_sensors);
+      //     addr = addr + 2;
+      //   }
+      //   show_loop_time_results();
+      //   break;
+      // }
 
       case TRACK_NUM_1: {
         //digitalWrite( LED_BUILTIN, HIGH);
@@ -595,7 +594,13 @@ void show_loop_time_results(){
   display.setCursor(0, 0);
   display.println ("loop_num = ");
   sprintf(string_for_5c,"%05d",loop_num);
-  display.print(string_for_5c);
+  display.println(string_for_5c);
+
+  mean_error = total_error / loop_num;
+  display.println ("mean_error = ");
+  sprintf(string_for_5c,"%05d",mean_error);
+  display.println(string_for_5c);
+
   display.display();
   stop_motors();
   while(digitalRead (BUTTON2) == HIGH){
@@ -746,7 +751,7 @@ long PID (int line_sensor_value, int Perror_old) {
     else{
       Ierror += Perror;
     }
-    Ierror = constrain(Ierror,-2000*FACTOR_P/FACTOR_I,2000*FACTOR_P/FACTOR_I);
+    Ierror = constrain(Ierror,-V_MAX_MAP_VALUE,V_MAX_MAP_VALUE);
   //}
   //  else{
   //    Ierror = 0;
@@ -866,30 +871,30 @@ int read_line_sensor() {
   read_sensor = (s1 + (s2 * 2) + (s3 * 4) + (s4 * 8) + (s5 * 16));
   black_sensors = read_sensor;
 
-    display.clearDisplay();
-    display.setCursor(0, 0);
+    // display.clearDisplay();
+    // display.setCursor(0, 0);
 
-    display.print ("s1: ");
-    sprintf(string_for_display,"%03d ",s1_value);
-    display.print(string_for_display);
+    // display.print ("s1: ");
+    // sprintf(string_for_display,"%03d ",s1_value);
+    // display.print(string_for_display);
     
-    display.print ("s2: ");
-    sprintf(string_for_display,"%03d ",s2_value);
-    display.print(string_for_display);
+    // display.print ("s2: ");
+    // sprintf(string_for_display,"%03d ",s2_value);
+    // display.print(string_for_display);
     
-    display.print ("s3: ");
-    sprintf(string_for_display,"%03d ",s3_value);
-    display.print(string_for_display);
+    // display.print ("s3: ");
+    // sprintf(string_for_display,"%03d ",s3_value);
+    // display.print(string_for_display);
     
-    display.print ("s4: ");
-    sprintf(string_for_display,"%03d ",s4_value);
-    display.print(string_for_display);
+    // display.print ("s4: ");
+    // sprintf(string_for_display,"%03d ",s4_value);
+    // display.print(string_for_display);
     
-    display.print ("s5: ");
-    sprintf(string_for_display,"%03d ",s5_value);
-    display.print(string_for_display);
+    // display.print ("s5: ");
+    // sprintf(string_for_display,"%03d ",s5_value);
+    // display.print(string_for_display);
     
-    display.display();
+    // display.display();
 
   for(int i = 0; i < 15; i++){
     if(SPLIT_ARRAY[i] == black_sensors){
@@ -1130,7 +1135,7 @@ void split_handler (){
   }
   delay(60);
   stop_motors();
-  write_to_logger(-1,0,0,0,0);
+  // write_to_logger(-1,0,0,0,0);
   digitalWrite(LED_BUILTIN, LOW);
 }
 
@@ -1283,6 +1288,9 @@ void line_follower(){
       }
       
     }
+
+    total_error += abs(final_line_sensor_value);
+
     pid = PID(final_line_sensor_value,Perror_old);
     pid = constrain(pid,-V_MAX_MAP_VALUE,V_MAX_MAP_VALUE);
     Perror_old = final_line_sensor_value;
@@ -1339,7 +1347,7 @@ void line_follower(){
   }
 */
 
-  write_to_logger(black_sensors, final_line_sensor_value, pid, motor_R_speed, motor_L_speed);
+  // write_to_logger(black_sensors, final_line_sensor_value, pid, motor_R_speed, motor_L_speed);
 
   drive_motor(RIGHT, motor_R_speed);
   drive_motor(LEFT, motor_L_speed);
