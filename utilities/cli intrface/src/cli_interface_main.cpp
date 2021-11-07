@@ -1,10 +1,10 @@
 #include <Arduino.h>
 #include <Wire.h>
-//#include "cs01_register_space.h"
-#include "typedefs.h"
+#include <robotal_common.h>
+// #include "typedefs.h"
 #include "cli_interface.h"
-#include "pinout.h"
-#include "constants.h"
+// #include "pinout.h"
+// #include "constants.h"
 #include <Adafruit_GFX.h>
 
 //#include <EEPROM.h>

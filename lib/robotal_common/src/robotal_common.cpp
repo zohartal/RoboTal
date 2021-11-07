@@ -3,23 +3,19 @@
 #include "typedefs.h"
 #include "pinout.h"
 #include "constants.h"
-#include "cli_interface.h"
+#include "robotal_common.h"
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h> 
 
 #define MOTOR
 
-// #include "function_declarations.h"
-// #include "service_functions.h"
-// #include "color_sensor_tcs34725.h"
 
 
 uint16_t color_min[4] = {0, 0, 0, 0};
 uint16_t color_max[4] = {0, 0, 0, 0};
 uint16_t readed_color[4];
 
-// const int RED = 0;
-// const int GREEN = 1;
-// const int BLUE = 2;
-// const int C = 3;
+
 
 //void color_display();
 void colored_line_follow(int line_color);
@@ -40,97 +36,95 @@ int black_sensors;
 int final_line_sensor_value;
 int S_MIN_ARRAY[] = {1000 ,1000 ,1000 ,1000 ,1000};
 int S_MAX_ARRAY[] = {0 ,0 ,0 ,0 ,0};
+int SENSOR_ARRAY[5];
 
 //const int BASIC_SPEED = 25;
 unsigned long loop_start_time;
 int loop_num = 0;
+int mean_error = 0;
+int total_error = 0;
 turn_side_t turn_side = R;
 track_number_t track;
 
-//SoftwareSerial mySerial(RX,TX); // RX, TX
-// Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-// Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_24MS, TCS34725_GAIN_1X);
+
+
+void show_loop_time_results (Adafruit_SSD1306 display) {
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.println ("loop_num = ");
+  sprintf(string_for_5c,"%05d",loop_num);
+  display.println(string_for_5c);
+
+  mean_error = total_error / loop_num;
+  display.println ("mean_error = ");
+  sprintf(string_for_5c,"%05d",mean_error);
+  display.println(string_for_5c);
+
+  display.display();
+  stop_motors();
+  while(digitalRead (BUTTON2) == HIGH){
+    delay(1);
+  }
+  delay(500);
+}
 
 
 
+void automatic_calibration(Adafruit_SSD1306 display){
+  digitalWrite(LED_BUILTIN, HIGH);
+  unsigned long calibration_time = millis();
+  unsigned long time_diff = millis()-calibration_time;
+  while(time_diff < 3000){
+      for(int i = 0; i < 5; i++){  
+        time_diff = millis()-calibration_time;    
+        int flag = update_min_max (SENSOR_ARRAY[i] , i);    
+        if(i == 4){
+          drive_motor(LEFT,15);
+          drive_motor(RIGHT,13);
+          delay(30);
+          stop_motors();
+          delay(50);
+        }  
+      }
+    }
 
-// void show_loop_time_results(){
-//   display.clearDisplay();
-//   display.setCursor(0, 0);
-//   display.println ("loop_num = ");
-//   sprintf(string_for_5c,"%05d",loop_num);
-//   display.println(string_for_5c);
+    digitalWrite(LED_BUILTIN, LOW);
 
-//   mean_error = total_error / loop_num;
-//   display.println ("mean_error = ");
-//   sprintf(string_for_5c,"%05d",mean_error);
-//   display.println(string_for_5c);
+    display.clearDisplay();
+    display.setCursor(0, 0);
 
-//   display.display();
-//   stop_motors();
-//   while(digitalRead (BUTTON2) == HIGH){
-//     delay(1);
-//   }
-//   delay(500);
-// }
-
-
-
-// void automatic_calibration(){
-//   digitalWrite(LED_BUILTIN, HIGH);
-//   unsigned long calibration_time = millis();
-//   unsigned long time_diff = millis()-calibration_time;
-//   while(time_diff < 3000){
-//       for(int i = 0; i < 5; i++){  
-//         time_diff = millis()-calibration_time;    
-//         int flag = update_min_max (SENSOR_ARRAY[i] , i);    
-//         if(i == 4){
-//           drive_motor(LEFT,15);
-//           drive_motor(RIGHT,13);
-//           delay(30);
-//           stop_motors();
-//           delay(50);
-//         }  
-//       }
-//     }
-
-//     digitalWrite(LED_BUILTIN, LOW);
-
-//     display.clearDisplay();
-//     display.setCursor(0, 0);
-
-//     display.print ("s1: ");
-//     sprintf(string_for_display,"%03d ",S_MIN_ARRAY[0]);
-//     display.print(string_for_display);
-//     sprintf(string_for_display,"%03d ",S_MAX_ARRAY[0]);
-//     display.println(string_for_display);
+    display.print ("s1: ");
+    sprintf(string_for_display,"%03d ",S_MIN_ARRAY[0]);
+    display.print(string_for_display);
+    sprintf(string_for_display,"%03d ",S_MAX_ARRAY[0]);
+    display.println(string_for_display);
     
-//     display.print ("s2: ");
-//     sprintf(string_for_display,"%03d ",S_MIN_ARRAY[1]);
-//     display.print(string_for_display);
-//     sprintf(string_for_display,"%03d ",S_MAX_ARRAY[1]);
-//     display.println(string_for_display);
+    display.print ("s2: ");
+    sprintf(string_for_display,"%03d ",S_MIN_ARRAY[1]);
+    display.print(string_for_display);
+    sprintf(string_for_display,"%03d ",S_MAX_ARRAY[1]);
+    display.println(string_for_display);
     
-//     display.print ("s3: ");
-//     sprintf(string_for_display,"%03d ",S_MIN_ARRAY[2]);
-//     display.print(string_for_display);
-//     sprintf(string_for_display,"%03d ",S_MAX_ARRAY[2]);
-//     display.println(string_for_display);
+    display.print ("s3: ");
+    sprintf(string_for_display,"%03d ",S_MIN_ARRAY[2]);
+    display.print(string_for_display);
+    sprintf(string_for_display,"%03d ",S_MAX_ARRAY[2]);
+    display.println(string_for_display);
     
-//     display.print ("s4: ");
-//     sprintf(string_for_display,"%03d ",S_MIN_ARRAY[3]);
-//     display.print(string_for_display);
-//     sprintf(string_for_display,"%03d ",S_MAX_ARRAY[3]);
-//     display.println(string_for_display);
+    display.print ("s4: ");
+    sprintf(string_for_display,"%03d ",S_MIN_ARRAY[3]);
+    display.print(string_for_display);
+    sprintf(string_for_display,"%03d ",S_MAX_ARRAY[3]);
+    display.println(string_for_display);
     
-//     display.print ("s5: ");
-//     sprintf(string_for_display,"%03d ",S_MIN_ARRAY[4]);
-//     display.print(string_for_display);
-//     sprintf(string_for_display,"%03d ",S_MAX_ARRAY[4]);
-//     display.println(string_for_display);
+    display.print ("s5: ");
+    sprintf(string_for_display,"%03d ",S_MIN_ARRAY[4]);
+    display.print(string_for_display);
+    sprintf(string_for_display,"%03d ",S_MAX_ARRAY[4]);
+    display.println(string_for_display);
     
-//     display.display();
-// }
+    display.display();
+}
 
 // void calibration(){
     // int no_calibration_counter = 0;
@@ -187,22 +181,22 @@ track_number_t track;
     
     // display.display();
 // }
-/*
+
 int update_min_max (uint8_t sn, int n){ 
-//   int s;
+  int s;
   int flag = -1;
-//     s = analogRead (sn);
-//     if (s > S_MAX_ARRAY[n]){
-//       S_MAX_ARRAY[n] = s;
-//       flag = 0;
-//     }
-//     if (s < S_MIN_ARRAY[n]){
-//       S_MIN_ARRAY[n] = s;
-//       flag = 0;
-//     }  
+    s = analogRead (sn);
+    if (s > S_MAX_ARRAY[n]){
+      S_MAX_ARRAY[n] = s;
+      flag = 0;
+    }
+    if (s < S_MIN_ARRAY[n]){
+      S_MIN_ARRAY[n] = s;
+      flag = 0;
+    }  
     return flag;
 }
-*/
+
 
 // long PID (int line_sensor_value, int Perror_old) {
 //   int Perror = line_sensor_value;

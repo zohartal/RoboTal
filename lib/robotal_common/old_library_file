@@ -1,0 +1,52 @@
+{
+    "name": "RoboTal Common library", 
+    "version": "1.0.0", 
+    "keywords": [
+        "display"
+    ], 
+    "description": "RoboTal common functionality.", 
+    "frameworks": [
+        "arduino"
+    ], 
+    "platforms": [
+        "atmelavr", 
+        "atmelsam", 
+        "espressif32", 
+        "espressif8266", 
+        "infineonxmc", 
+        "intel_arc32", 
+        "kendryte210", 
+        "microchippic32", 
+        "nordicnrf51", 
+        "nordicnrf52", 
+        "ststm32", 
+        "ststm8", 
+        "teensy", 
+        "timsp430"
+    ], 
+    "authors": [
+        {
+            "email": "4lontal@gmail.com", 
+            "url": null, 
+            "maintainer": true, 
+            "name": "Alon Tal"
+        }
+    ], 
+    "repository": {
+        "type": "git", 
+        "url": "https://github.com/RoboTal"
+    }, 
+    "homepage": null, 
+    "export": {
+        "include": null, 
+        "exclude": [
+            "extras", 
+            "docs", 
+            "tests", 
+            "test", 
+            "*.doxyfile", 
+            "*.pdf"
+        ]
+    }, 
+    "id": 13
+}
