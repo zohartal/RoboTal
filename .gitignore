@@ -35,3 +35,4 @@ isolirband_v18_ref_1/isolirband_v18_ref_1.ino.bak
 isolirband_v19_silver/isolirband_v19_silver.ino.bak
 *.bak
 .vscode/c_cpp_properties.json
+*.swp
