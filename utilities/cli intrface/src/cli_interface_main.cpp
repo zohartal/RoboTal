@@ -34,12 +34,14 @@ w - write
 
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+int display_en = 1;
 
 void setup()
 {
   Wire.begin(); // join i2c bus (address optional for master)
 
   Serial.begin(9600);
+  Serial.println("I2C master is up (1)");
   pinMode(LED_BUILTIN,OUTPUT);
 
   pinMode( MOTOR_A_DIR1, OUTPUT );
@@ -52,9 +54,9 @@ void setup()
   pinMode( BUTTON, INPUT_PULLUP );
   pinMode( BUTTON2, INPUT_PULLUP );
 
-
+Serial.println("I2C master is up (2)");
   stop_motors();
-
+Serial.println("I2C master is up (3)");
   digitalWrite(LED_BUILTIN,HIGH);
   delay(500);
   digitalWrite(LED_BUILTIN,LOW);
@@ -66,22 +68,24 @@ void setup()
 //   attachInterrupt(digitalPinToInterrupt(ENC_A_INT), motor_r_interrupt, RISING);
 //   attachInterrupt(digitalPinToInterrupt(ENC_B_INT), motor_l_interrupt, RISING);
 
-  
+  Serial.println("I2C master is up (4)");
   if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3c)) { 
     digitalWrite(LED_BUILTIN,HIGH);
-    while(1){
-      delay(1);
-    }
+    Serial.println("SSD1306 not detected");
+    display_en = 0;
+    // while(1){
+    //   delay(1);
+    // }
   }
 
-
-  display.clearDisplay();
-  display.display();
-  display.setTextColor(WHITE);
-  display.setCursor(0, 0); 
-  display.println("start. ");
-  display.display();
-
+  if (display_en ==1) {
+    display.clearDisplay();
+    display.display();
+    display.setTextColor(WHITE);
+    display.setCursor(0, 0); 
+    display.println("start. ");
+    display.display();
+  }
 
 
   Serial.println("I2C master is up");
@@ -106,6 +110,7 @@ long int data_n;
 int counter1=0;
 int counter2=0;
 int counter3=0;
+int i2c_addr = 4;
 
 void loop()
 {  
@@ -143,6 +148,12 @@ void loop()
         else if (cmd.equals("wts")) {
           write_to_screen(parameter1);
         }
+        else if (cmd.equals("set_i2c_addr")){
+          reg_n = parameter1.toInt();
+          i2c_addr = reg_n;
+          Serial.print("set i2c Address to ");
+          Serial.println(i2c_addr);
+        }        
         else if (cmd.equals("blink")){
           reg_n = parameter1.toInt();
           blink (reg_n);
@@ -185,7 +196,7 @@ void loop()
    }
 }
 
-int color_sensor_read16(int i2c_address, char sensor_address){
+int i2c_read16(int i2c_address, char sensor_address){
   int result = 0;
   int b0;
   int b1;
@@ -199,7 +210,7 @@ int color_sensor_read16(int i2c_address, char sensor_address){
   return result;
 }
 
-void color_sensor_write16(int i2c_address, char sensor_address, int data){
+void i2c_write16(int i2c_address, char sensor_address, int data){
   byte low_byte = data & 0xff;
   byte high_byte = data >> 8;  
   Wire.beginTransmission(i2c_address);  
@@ -214,17 +225,17 @@ void handle_write( int reg, int data){
    Serial.print(reg);
    Serial.print(", data=");
    Serial.println(data);
-   //color_sensor_write16(4, reg, data);
+   i2c_write16(i2c_addr, reg, data);
    Serial.println("handle_write(): done");
 }
 
 void handle_read( int reg){
   Serial.print("handle_read(): reg=");
   Serial.print(reg);  
-  Serial.println("handle_read(): done");
-  //int data = color_sensor_read16(4, reg); 
-  //Serial.print(", data=");
-  //Serial.println(data);  
+  Serial.println(", handle_read(): done");
+  int data = i2c_read16(i2c_addr, reg); 
+  Serial.print(", data=");
+  Serial.println(data);  
 
 }
 

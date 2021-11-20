@@ -94,7 +94,7 @@ void loop()
    }
 }
 
-int color_sensor_read16(int i2c_address, char sensor_address){
+int i2c_read16(int i2c_address, char sensor_address){
   int result = 0;
   int b0;
   int b1;
@@ -108,7 +108,7 @@ int color_sensor_read16(int i2c_address, char sensor_address){
   return result;
 }
 
-void color_sensor_write16(int i2c_address, char sensor_address, int data){
+void i2c_write16(int i2c_address, char sensor_address, int data){
   byte low_byte = data & 0xff;
   byte high_byte = data >> 8;  
   Wire.beginTransmission(i2c_address);  
@@ -123,14 +123,14 @@ void handle_write( int reg, int data){
    Serial.print(reg);
    Serial.print(", data=");
    Serial.println(data);
-   color_sensor_write16(4, reg, data);
+   i2c_write16(4, reg, data);
    Serial.println("handle_write(): done");
 }
 
 void handle_read( int reg){
   Serial.print("handle_read(): reg=");
   Serial.print(reg);  
-  int data = color_sensor_read16(4, reg); 
+  int data = i2c_read16(4, reg); 
   Serial.print(", data=");
   Serial.println(data);  
 

@@ -36,3 +36,4 @@ isolirband_v19_silver/isolirband_v19_silver.ino.bak
 *.bak
 .vscode/c_cpp_properties.json
 *.swp
+lib/robotal_ultrasonic_sensor/.vscode/*
