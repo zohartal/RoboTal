@@ -1,11 +1,7 @@
 #include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+#include <LiquidCrystal_I2C.h>
 
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
-// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
-#define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
+
 
 
 const int LED = 13;
@@ -27,9 +23,9 @@ const int S4 = A1;
 const int S5 = A0;
 
 
-// #define SCREEN
+#define SCREEN
 #ifdef SCREEN
-  Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+  LiquidCrystal_I2C lcd(0x27,16,2);  // set the LCD address to 0x3F for a 16 chars and 2 line display  
 #endif
 
 
@@ -63,24 +59,23 @@ void setup() {
   Serial.println("RoboTal 2019: Begin");
 
 #ifdef SCREEN
- if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3c)) { 
-   digitalWrite(LED,HIGH);
-   Serial.println("RoboTal 2019: Display unavailable");
-  //  while(1){
-  //    delay(1);
-  //  }
- }  
- else {
-   Serial.println("RoboTal 2019: Display started");
- }
 
-    display.clearDisplay();
-    display.display();
-    display.setTextColor(WHITE);
-    display.setCursor(0, 0); 
-    display.println("start");
-    display.display();
+  lcd.init();
+  lcd.clear();         
+  lcd.backlight();      // Make sure backlight is on
+  
+  // Print a message on both lines of the LCD.
+  lcd.setCursor(2,0);   //Set cursor to character 2 on line 0
+  lcd.print("RoboTal 19");
+  
+  lcd.setCursor(2,1);   //Move cursor to character 2 on line 1
+  lcd.print("LCD Started");
+
+   Serial.println("RoboTal 2019: Display started");
 #endif
+
+
+
 }
 
 void loop() {    
