@@ -1,7 +1,7 @@
 #include "line_sensor.h"
 #include "pid.h"
 #include "calibration.h"
-//#include "display.h"
+#include "display.h"
 //#include "color_sensor.h"
 #include <SoftwareSerial.h>
 #include <Servo.h>
@@ -20,7 +20,7 @@
 #endif
   
 #define SERIAL_ON
-//#define SCREEN
+#define SCREEN
 #define MOTOR
 //#define COLOR_SENSOR
 
