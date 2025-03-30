@@ -2,8 +2,8 @@
 #include "pid.h"
 #include "calibration.h"
 #include "display.h"
-#include <SoftwareSerial.h>
-#include "encoder_playback_arrays.h"
+// #include <SoftwareSerial.h>
+// #include "encoder_playback_arrays.h"
 #include "general.h"
 //#include "sensor_monitor.c"
 
@@ -23,7 +23,7 @@
 // GENERAL DEFINES //
 
 // #define SCREEN
-// #define MOTOR
+#define MOTOR
 //#define PRINT_ENC  
 #define SERIAL_ON
 #define SERIAL_HW
@@ -37,7 +37,6 @@
 #endif
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-
 
 
 // PINOUT //
@@ -63,13 +62,13 @@ const int MOTOR_B_PWM = 11; // right motor Motor B PWM Speed
 const int MOTOR_B_DIR = 12; // right motor Motor B Direction
 
 const int LED = 13;
-const int BATT_PIN = A5;
+const int BATT_PIN = A7;
 
 #ifdef ARDUINO_NANO
   const int S1 = A6;
 #endif
 #ifdef ARDUINO_LEONARDO
-  const int S1 = A4;
+  // const int S1 = A4;
 #endif
 const int S2 = A3;
 const int S3 = A2;
@@ -79,14 +78,13 @@ const int S5 = A0;
 const uint8_t SENSOR_ARRAY[] = {S1 ,S2 ,S3 ,S4 ,S5 };
 
 
-
 void setup() {
 
   int i;
-  motor_l_cnt = 0;
-  motor_r_cnt = 0;
+  // motor_l_cnt = 0;
+  // motor_r_cnt = 0;
 
-  Ierror = 0;
+  // Ierror = 0;
   
   pinMode( LED, OUTPUT );
 
@@ -103,20 +101,13 @@ void setup() {
   pinMode( BUTTON0, INPUT_PULLUP );
   pinMode (BUTTON1, INPUT_PULLUP );
   
-  attachInterrupt(digitalPinToInterrupt(MOTOR_R_ENC_A), motor_r_interrupt, RISING);
-  attachInterrupt(digitalPinToInterrupt(MOTOR_L_ENC_A), motor_l_interrupt, RISING);
+  // attachInterrupt(digitalPinToInterrupt(MOTOR_R_ENC_A), motor_r_interrupt, RISING);
+  // attachInterrupt(digitalPinToInterrupt(MOTOR_L_ENC_A), motor_l_interrupt, RISING);
+  pinMode(BATT_PIN,INPUT);
 
 
   blink_led(150,150,3);
 
-  #ifdef SCREEN 
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3c)) { 
-    digitalWrite(LED,HIGH);
-    while(1){
-      delay(1);
-    }
-  }
-  #endif
   
   // set the data rate for the SoftwareSerial port
   serial_en = 0;
@@ -125,28 +116,49 @@ void setup() {
     serial_en = 1;
     SERIAL.println("Begin.");
   #endif
+
+  float batt = test_battery_level();
+  SERIAL.print("BAT=");
+  SERIAL.print(batt);
+  SERIAL.println("%");
+
+
+  #ifdef SCREEN   
+  if (serial_en) SERIAL.println(F("SSD1306 allocation start"));
+  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+      if (serial_en) SERIAL.println(F("SSD1306 allocation failed"));
+  // if(!display.begin()) {     
+    while(1){
+      delay(1000);
+      blink_led(50,50,20);
+    }
+  }
+  #endif
+
   //mySerial.begin(38400);
   //mySerial.println("Isolirband 2019: Begin. Battery=");
-  float batt = test_battary_level();
+ 
   //mySerial.println(batt);
   #ifdef SCREEN
+    if (serial_en) SERIAL.println("Starting OLED display.");
+
     display.clearDisplay();
     display.display();
     display.setTextColor(WHITE);
     display.setCursor(0, 0); 
-    display.println("start. ");
+    display.println(F("start. "));
     display.print("Battery: ");
     display.println(batt);
-    display.println("v2025");
+    display.println(F("v2025"));
     display.display();
+    if (serial_en) SERIAL.println("Starting OLED display DONE.");
   #endif
-    
+ 
   stop_motor(RIGHT); 
   stop_motor(LEFT);
 
   init_line_sensor();
 
-  push_time = millis();
   delay(500);
   motor_l_cnt = 0;
   motor_r_cnt = 0;
@@ -159,14 +171,17 @@ void setup() {
   //encoder_follower(300,0,50);
   
   //mySerial.println(turn_side[0]);
-  time_flag = push_time;
+  // time_flag = push_time;
  // stage = T_5_STAGE_4;
  // encoder_follower (300,400,40);
  // delay(1000);
  // encoder_follower (500,200,35);
   //while(1){
   //}
+
 }
+
+
 
 
 void loop() {
@@ -237,9 +252,7 @@ int parseCommand(const char *input, ParsedCommand *parsedCommand) {
 }
 
 void serial_cli() {
-    static char commandBuffer[MAX_COMMAND_SIZE] = {0};
-    static int bufferIndex = 0;
-
+    int l_result = 0;
     // Read data from Serial when available
     while (SERIAL.available() > 0) {
         char incomingChar = SERIAL.read();
@@ -257,13 +270,13 @@ void serial_cli() {
                 ParsedCommand parsed_cmd;
 
                 // Parse the command
-                int result = parseCommand(commandBuffer, &parsed_cmd);
-                if (result == 0) {
+                l_result = parseCommand(commandBuffer, &parsed_cmd);
+                if (l_result == 0) {
                     exec_uart_cmd(parsed_cmd);
                 } else {
                     // Print error message
                     SERIAL.print("Error parsing command. Code: ");
-                    SERIAL.println(result);
+                    SERIAL.println(l_result);
                 }
             } else {
                 SERIAL.println("Unknown command. Command string must start with colon ':' (UART_COMMAND_CHAR)");
@@ -277,18 +290,18 @@ void serial_cli() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 void exec_uart_cmd(ParsedCommand cmd_l) {
-    int i;
+    int ie=0;
     CommandPair cur_cmd;
     SERIAL.println("exec_uart_cmd. Start. NUM_COMMANDs=");
     SERIAL.println(NUM_COMMANDS);
     for (int j=0; j<cmd_l.pairCount; j++) {
         cur_cmd = cmd_l.pairs[j];
-        for (int i = 0; i < NUM_COMMANDS; i++) { // parse all commands forthe one requested by the user
+        for (ie = 0; ie < NUM_COMMANDS; ie++) { // parse all commands forthe one requested by the user
           // SERIAL.print("cli_cmd_l[i].key=");
           // SERIAL.println(cli_cmd_l[i].key);
-          if (cli_cmd_l[i].key == cur_cmd.key) {
+          if (cli_cmd_l[ie].key == cur_cmd.key) {
               SERIAL.println("matched!");
-              cli_cmd_l[i].function(cur_cmd.value); // execute the selected command with the provided value
+              cli_cmd_l[ie].function(cur_cmd.value); // execute the selected command with the provided value
           }
         }
     }
@@ -305,14 +318,26 @@ void led_cli_access(int value) {
   }
 }
 void right_motor_cli_access(int value){
+  int mapme;
+  mapme = map(value,0,255,-100,100);
   SERIAL.print("right_motor_cli_access. val=");
-  SERIAL.println(value);
-
+  SERIAL.print(value);
+  SERIAL.print(", mapped=");
+  SERIAL.println(mapme);
+  drive_motor(RIGHT,mapme);
+  delay(1000);
+  stop_motor(RIGHT);
 }
 void left_motor_cli_access(int value){
+  int mapme;
+  mapme = map(value,0,255,-100,100);  
   SERIAL.print("left_motor_cli_access. val=");
-  SERIAL.println(value);
-
+  SERIAL.print(value);
+  SERIAL.print(", mapped=");
+  SERIAL.println(mapme);
+  drive_motor(LEFT,mapme);
+  delay(1000);
+  stop_motor(LEFT);  
 }
 void sensor_cli_access(int value){
   int s;
@@ -339,6 +364,22 @@ void calibration_cli_access(int value) {
   calibration();
 }
 
+void button_cli_access(int value) {
+  int b0;
+  int b1;
+  for (int i=0;i<value;i++) {      
+      b0 = digitalRead (BUTTON0);
+      b1 = digitalRead (BUTTON1);
+      SERIAL.print(i);
+      SERIAL.print("- button_cli_access. BUTTON0=");
+      SERIAL.print(b0);
+      SERIAL.print(". BUTTON1=");
+      SERIAL.print(b1);    
+      SERIAL.println(".");
+      delay(100);
+  } 
+}
+
 // Function to print help screen
 void help_cli_access(int value) {
     SERIAL.println("\nAvailable Commands:\n");
@@ -354,12 +395,15 @@ void help_cli_access(int value) {
 void main_menu() {   
     if(digitalRead (BUTTON0) == LOW){
       prog = update_prog_num(prog);
+      #ifdef SCREEN
       display.clearDisplay();
       display.display();
       display.setCursor(0, 0); 
       display.println(prog_num_to_str(prog));
       display.println(prog);
       display.display();
+      #endif
+      if (serial_en) SERIAL.println(prog_num_to_str(prog));
       delay(500);
     }  
 
@@ -369,7 +413,9 @@ void main_menu() {
             calibration();
             break;
           case LINE_FOLLOWER :
-            line_follower_loop();
+            line_follower_loop();            
+            stop_motor(LEFT);
+            stop_motor(RIGHT);
             break;
           case ENC_TR_1 :
               blink_led(50,50,20);
@@ -380,9 +426,18 @@ void main_menu() {
 }
 
 void line_follower_loop(){
+  unsigned long update_time;
+  unsigned long time = millis();
+  update_time = millis();
 
     while (digitalRead (BUTTON0) == HIGH){
         line_follower();
+        time = millis();
+        if (time - update_time > 10000) {
+          update_display();
+          update_time = time;
+        }
+
     } 
 }
 
@@ -392,8 +447,7 @@ void line_follower(){
   int motor_R_speed = 0;
   int motor_L_speed = 0;
   int split_number = 0;
-  unsigned long time = millis();
-  unsigned long time_from_start = time - push_time;
+
   
   line_sensor_value = read_line_sensor(); 
   if (line_sensor_value != -1){
@@ -415,12 +469,6 @@ void line_follower(){
           
 
     }
-    //mySerial.print(" spl = ");
-    //mySerial.print(spl);
-    //mySerial.print(" final_line_sensor_value = ");
-    //mySerial.print(final_line_sensor_value);
-    //mySerial.print(" time = ");
-    //mySerial.print(time);
   }
   else {
 
@@ -438,7 +486,7 @@ void line_follower(){
   //motor_R_speed = (50 - pid);
 
   unsigned long abs_pid = abs(pid);
-  int v = map(abs_pid,0,50,max_speed,0);
+  int v = map(abs_pid,0,50,MAX_SPEED,0);
   unsigned long vm = (abs_pid*TURN_FACTOR)/1000;
 
   v = constrain(v,20,100);
@@ -459,15 +507,19 @@ void line_follower(){
 #ifdef SERIAL_ON
 
   //time = millis();
-  //mySerial.print(", v= ");
-  //mySerial.print(v);
+  SERIAL.print(", v= ");
+  SERIAL.print(v);
   
-  //mySerial.print(", |pid|= ");
-  //mySerial.print((int)abs_pid);
+  SERIAL.print(", |pid|= ");
+  SERIAL.print((int)abs_pid);
     
-  //mySerial.print(", vm= ");
-  //mySerial.println(vm);
-  
+  SERIAL.print(", vm= ");
+  SERIAL.print(vm);
+  SERIAL.print(", R=");
+  SERIAL.print(motor_R_speed);
+  SERIAL.print(", L=");
+  SERIAL.println(motor_L_speed);
+
 #endif
 
   if (IDLE_DELAY > 0) {
@@ -492,107 +544,6 @@ void line_follower(){
       time_flag = time;
   }
 #endif
-  return;
-}
-
-// need to implement - follow encounter values until they pass the defined values
-void encoder_follower (int target_r_cnt, int target_l_cnt, int basic_speed) {
-  int l_cnt = motor_l_cnt;
-  int r_cnt = motor_r_cnt;
-  int r_diff = target_r_cnt - (motor_r_cnt - r_cnt);
-  int l_diff = target_l_cnt - (motor_l_cnt - l_cnt);
-  int drive_factor = 5;
-  
-  stop_motor(RIGHT);
-  stop_motor(LEFT);
-  //mySerial.println("encoder follower start");
-  
-  while(((motor_r_cnt - r_cnt) < target_r_cnt) or ((motor_l_cnt - l_cnt) < target_l_cnt)){
-    r_diff = target_r_cnt - (motor_r_cnt - r_cnt);
-    l_diff = target_l_cnt - (motor_l_cnt - l_cnt);
-    
-    if((motor_r_cnt - r_cnt) < target_r_cnt){
-      if((r_diff - l_diff) < 1){
-        drive_motor(RIGHT,basic_speed);
-      }
-      
-      else{
-        drive_motor(RIGHT,basic_speed + (r_diff - l_diff) / drive_factor);
-      }
-      
-    }
-    else{
-      stop_motor(RIGHT);
-    }
-
-    
-    if((motor_l_cnt - l_cnt) < target_l_cnt){
-      if((l_diff - r_diff) < 1){
-        drive_motor(LEFT,basic_speed);
-      }
-    
-      else{
-        drive_motor(LEFT,basic_speed + (l_diff - r_diff) / drive_factor);
-      }
-      
-    }
-    else{
-      stop_motor(LEFT);
-    }
-//     mySerial.print("r_diff= ");
-//     mySerial.print(r_diff);
-//     mySerial.print(", l_diff= ");
-//     mySerial.println(l_diff);     
-  }
-  stop_motor(RIGHT);
-  stop_motor(LEFT);
-
-  //mySerial.println("encoder follower done");
-}
-
-void encoder_playback(int* left_array, int* right_array,int max_index){
-  int drive_factor = 2;
-  int l_move = 0;
-  int r_move = 0;
-  int drive_delay = 90;
-
-  for(int i = 0; i < max_index; i ++){
-    while((motor_r_cnt < right_array[i]) and (motor_l_cnt < left_array[i])){
-      if(((right_array [i] - motor_r_cnt) < 40 ) and ((left_array [i] - motor_l_cnt) < 40 )){
-        //mySerial.println(" break ");
-        break;
-      }
-      //mySerial.print(i);
-      //mySerial.print(" encoder_l = ");
-      //mySerial.print(motor_l_cnt);
-      //mySerial.print(" encoder_r = ");
-      //mySerial.print(motor_r_cnt);
-      //mySerial.print(" left_array = ");
-      //mySerial.print(left_array[i]);
-      //mySerial.print(" right_array = ");
-      //mySerial.print(right_array[i]);
-      l_move = (left_array [i] - motor_l_cnt) / drive_factor;
-      r_move = (right_array [i] - motor_r_cnt) / drive_factor;
-      //mySerial.print(" r_move = ");
-      //mySerial.print(r_move);
-      //mySerial.print(" l_move = ");
-      //mySerial.println(l_move);
-      drive_motor(RIGHT, l_move);
-      drive_motor(LEFT, r_move);
-      delay(drive_delay);
-    }
-  }
-  while((motor_l_cnt < left_array [max_index]) or (motor_r_cnt < right_array [max_index])){
-    if(motor_l_cnt < left_array [max_index]){
-      drive_motor (LEFT,20);
-    }
-    if(motor_r_cnt < right_array [max_index]){
-      drive_motor (RIGHT,20);
-    }
-    delay(1);
-  }
-  stop_motor(RIGHT);
-  stop_motor(LEFT);
   return;
 }
 
@@ -635,35 +586,23 @@ int read_line_sensor() {
   s4_value = constrain(s4_value,S_MIN_ARRAY[3],S_MAX_ARRAY[3]);
   s5_value = constrain(s5_value,S_MIN_ARRAY[4],S_MAX_ARRAY[4]);
 
-
-  //mySerial.print(",s1_value = ");
-  //mySerial.print(s1_value);
-  //mySerial.print(",s2_value = ");
-  //mySerial.print(s2_value);
-  //mySerial.print(",s3_value = ");
-  //mySerial.print(s3_value);
-  //mySerial.print(",s4_value = ");
-  //mySerial.print(s4_value);
-  SERIAL.print(",s5_value = ");
-  SERIAL.println(s5_value);
-
   s1_value = map(s1_value,S_MIN_ARRAY[0],S_MAX_ARRAY[0],0,1000);
   s2_value = map(s2_value,S_MIN_ARRAY[1],S_MAX_ARRAY[1],0,1000);
   s3_value = map(s3_value,S_MIN_ARRAY[2],S_MAX_ARRAY[2],0,1000);
   s4_value = map(s4_value,S_MIN_ARRAY[3],S_MAX_ARRAY[3],0,1000);
   s5_value = map(s5_value,S_MIN_ARRAY[4],S_MAX_ARRAY[4],0,1000);  
 
-  SERIAL.print("after map: s1_value = ");
-  SERIAL.print(s1_value);
-  SERIAL.print(",s2_value = ");
-  SERIAL.print(s2_value);
-  SERIAL.print(",s3_value = ");
-  SERIAL.print(s3_value);
-  SERIAL.print(",s4_value = ");
-  SERIAL.print(s4_value);
-  SERIAL.print(",s5_value = ");
-  SERIAL.print(s5_value);
-  SERIAL.print(". ");
+  // SERIAL.print("after map: s1_value = ");
+  // SERIAL.print(s1_value);
+  // SERIAL.print(",s2_value = ");
+  // SERIAL.print(s2_value);
+  // SERIAL.print(",s3_value = ");
+  // SERIAL.print(s3_value);
+  // SERIAL.print(",s4_value = ");
+  // SERIAL.print(s4_value);
+  // SERIAL.print(",s5_value = ");
+  // SERIAL.print(s5_value);
+  // SERIAL.print(". ");
 
   p1 = (long) s1_value * L_s1;
   p2 = (long) s2_value * L_s2;
@@ -677,10 +616,10 @@ int read_line_sensor() {
 
 
   line = psum / sum;
-  // line = line - 1000;
+  line = line - 1000;
   
-  // SERIAL.print(",line = ");
-  // SERIAL.println(line);
+  SERIAL.print(",line = ");
+  SERIAL.println(line);
   return line;
 }
 
@@ -698,15 +637,18 @@ void init_line_sensor() {
 void calibration(){
     int no_calibration_counter = 0;
     digitalWrite(LED , HIGH);
-    //mySerial.println("calibration");
+    #ifdef SCREEN
+    display.clearDisplay();
+    display.setCursor(0, 0);    
+    display.println("CALIBRATION"); 
+    display.display();
+    #endif
+
     while(no_calibration_counter < 500){
       for(int i = 0; i < 5; i++){      
         int flag = update_min_max (SENSOR_ARRAY[i] , i);       
         if(flag == 0){
           no_calibration_counter = 0;
-          //mySerial.print(i);
-          //mySerial.println ("calibrated");
-        
         }    
         else{
           no_calibration_counter++;
@@ -820,14 +762,14 @@ int PID (int line_sensor_value, int Perror_old) {
   }
 //      max 50,              max 30              max 10
   f = Perror / FACTOR_P + Derror / FACTOR_D + Ierror / FACTOR_I;
-  //mySerial.print(", P = ");
-  //mySerial.print(Perror);
-  //mySerial.print(", I = ");
-  //mySerial.print(Ierror);
-  //mySerial.print(", D = ");
-  //mySerial.print(Derror);
-  //mySerial.print(", F = ");
-  //mySerial.print(f);
+  SERIAL.print(", P = ");
+  SERIAL.print(Perror);
+  SERIAL.print(", I = ");
+  SERIAL.print(Ierror);
+  SERIAL.print(", D = ");
+  SERIAL.print(Derror);
+  SERIAL.print(", F = ");
+  SERIAL.print(f);
   f = constrain(f,-50,50);
   return f;
 
@@ -859,8 +801,8 @@ void drive_motor ( motor_t motor_e , int spd)
     if(motor_e == RIGHT){
        motor_speed = map(speed,0,100,50,255);
        #ifdef SERIAL_ON 
-        //  mySerial.print(", ");
-        //  mySerial.println("r-b");
+        //  SERIAL.print(", ");
+        //  SERIAL.println("r-b");
        #endif
        digitalWrite( MOTOR_B_DIR, LOW );
        analogWrite( MOTOR_B_PWM, motor_speed );
@@ -868,13 +810,13 @@ void drive_motor ( motor_t motor_e , int spd)
     else{
       motor_speed = map(speed,0,100,50,255);;
       #ifdef SERIAL_ON 
-        // mySerial.print(", ");
-        // mySerial.println("l-b");
+        // SERIAL.print(", ");
+        // SERIAL.println("l-b");
       #endif
       digitalWrite( MOTOR_A_DIR, LOW );
       analogWrite( MOTOR_A_PWM, motor_speed );
       #ifdef SERIAL_ON
-      //  mySerial.println(motor_speed);
+       SERIAL.println(motor_speed);
       #endif 
     }
   }
@@ -882,8 +824,8 @@ void drive_motor ( motor_t motor_e , int spd)
     if(motor_e == RIGHT){
       motor_speed = map(speed,0,100,200,0);;
       #ifdef SERIAL_ON 
-        // mySerial.print(", ");
-        // mySerial.println("r-f");
+        // SERIAL.print(", ");
+        // SERIAL.println("r-f");
       #endif
       digitalWrite( MOTOR_B_DIR, HIGH ); 
       analogWrite( MOTOR_B_PWM, motor_speed ); 
@@ -891,8 +833,8 @@ void drive_motor ( motor_t motor_e , int spd)
     else{
      motor_speed = map(speed,0,100,200,0);;
       #ifdef SERIAL_ON 
-        // mySerial.print(", ");
-        // mySerial.println("l-f");
+        // SERIAL.print(", ");
+        // SERIAL.println("l-f");
       #endif
       digitalWrite( MOTOR_A_DIR, HIGH );
       analogWrite( MOTOR_A_PWM, motor_speed );
@@ -921,40 +863,63 @@ switch (motor) {
   }   
 }
 
-void motor_r_interrupt() {
-  int b = digitalRead(MOTOR_R_ENC_B);
-  if (b == HIGH) {
-    motor_r_cnt++;
-  }
-  else {
-    motor_r_cnt--;
-  }
-}
 
-void motor_l_interrupt() {
-  int b = digitalRead(MOTOR_L_ENC_B);
-  if (b == HIGH) {
-    motor_l_cnt--;
-  }
-  else {
-    motor_l_cnt++;
-  }
-}
+// void motor_r_interrupt() {
+//   int b = digitalRead(MOTOR_R_ENC_B);
+//   if (b == HIGH) {
+//     motor_r_cnt++;
+//   }
+//   else {
+//     motor_r_cnt--;
+//   }
+// }
+
+// void motor_l_interrupt() {
+//   int b = digitalRead(MOTOR_L_ENC_B);
+//   if (b == HIGH) {
+//     motor_l_cnt--;
+//   }
+//   else {
+//     motor_l_cnt++;
+//   }
+// }
 
 
-float test_battary_level() {
+float test_battery_level() {
   float res;
   int batt_level = analogRead(BATT_PIN);
-  res = (float) batt_level * 5 /1024;
+  SERIAL.println(batt_level);
+
+  res = ((float)batt_level/820)*100; //820 is equivilent to 4v/5v (input max value is 4v while the analog in measures up to 5v)
+  SERIAL.println(res);
+
   return res;
 }
 
-void stop_all() {
-  stop_motor(LEFT);
-  stop_motor(RIGHT);
-  while (1) {
-  }
+// void stop_all() {
+//   stop_motor(LEFT);
+//   stop_motor(RIGHT);
+//   while (1) {
+//   }
+// }
+
+
+void update_display() {
+  #ifdef SCREEN
+    display.clearDisplay();
+    display.display();
+    display.setTextColor(WHITE);
+    display.setCursor(0, 0);     
+    display.print("Battery: ");
+    display.println(test_battery_level());
+    display.display();  
+  #endif
+  if (serial_en) {
+    SERIAL.print("BAT=");
+    SERIAL.println(test_battery_level());
+  };
 }
+
 
 void blink_led (int t_low, int t_high, int repeat) {
   int i;

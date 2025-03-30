@@ -1,8 +1,8 @@
 
 // UART command parameters
-const long int BAUD_RATE =38400;
-const int MAX_COMMAND_SIZE =64;
-const int MAX_PAIRS =10;
+// const long int BAUD_RATE =38400;
+const int MAX_COMMAND_SIZE =7;
+const int MAX_PAIRS =2;
 const int UART_COMMAND_CHAR = ':';
 
 typedef struct {
@@ -28,21 +28,26 @@ void left_motor_cli_access(int value);
 void sensor_cli_access(int value);
 void calibration_cli_access(int value);
 void sensor_line_cli_access(int value);
+void button_cli_access(int value);
 void help_cli_access(int value);
 
 // Command table
-CommandEntry cli_cmd_l[] = {
+const CommandEntry cli_cmd_l[] = {
     {'L', led_cli_access, "LED on/off [0/1]"},
-    {'r', right_motor_cli_access, "Right motor speed [0-255]"},
-    {'l', left_motor_cli_access, "Left motor speed [0-255]"},
-    {'c', calibration_cli_access, "Sensor calibration [0]"},
-    {'s', sensor_cli_access, "Sensor read [0-4]"},
-    {'S', sensor_line_cli_access, "Sensor array read (repeat n times [1-100]"},
-    {'h', help_cli_access, "Prnt this [0]"}
+    {'r', right_motor_cli_access, "Rt mtr spd [0-255]"},
+    {'l', left_motor_cli_access, "Lt mtr spd [0-255]"},
+    {'c', calibration_cli_access, "Sen cal [0]"},
+    {'s', sensor_cli_access, "Sen rd [0-4]"},
+    {'S', sensor_line_cli_access, "Sen arr rd rpt[1-100]"},
+    {'b', button_cli_access, "Btn rd rpt[1-100]"},
+    {'h', help_cli_access, "this [0]"}
 };
 
 // Number of commands
 #define NUM_COMMANDS (sizeof(cli_cmd_l) / sizeof(cli_cmd_l[0]))
+
+char commandBuffer[MAX_COMMAND_SIZE] = {0};
+int bufferIndex = 0;
 
 // -- END UART -- //
 
@@ -51,7 +56,7 @@ typedef enum p_name { CALIBRATION, LINE_FOLLOWER, ENC_TR_1 } prog_number_t;
 
 // FUNCTIONS //
 void serial_cli();
-float test_battary_level();
+float test_battery_level();
 void stop_all();
 void drive_motor ( motor_t motor_e , int spd);
 void stop_motor ( motor_t motor );
@@ -66,6 +71,7 @@ void encoder_playback(int* left_array, int* right_array,int max_index);
 void encoder_follower (int target_r_cnt, int target_l_cnt, int basic_speed);
 void blink_led (int t_low, int t_high, int repeat);
 void exec_uart_cmd(ParsedCommand cmd_l);
+void update_display();
 
 // GLOBALS //
 int Ierror;
@@ -79,11 +85,13 @@ int motor_r_cnt;
 unsigned long current_time = 0;
 unsigned long previous_time = 0;
 unsigned long time_difference = 0;
-unsigned long push_time;
+// unsigned long push_time;
 unsigned long time_flag;
-int max_speed = 100;
+// int max_speed = 100;
 
 const int PNAME_MAX = 2;
-prog_number_t prog = LINE_FOLLOWER;
+prog_number_t prog = ENC_TR_1;
+
+
 
 

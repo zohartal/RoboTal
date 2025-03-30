@@ -3,7 +3,8 @@ typedef enum motor_e {  LEFT,  RIGHT  } motor_t;
 typedef enum motor_direction_e {  FORWARD,  BACKWARD  } motor_direction_t;
 int PID (int line_sensor_value, int Perror_old);
 
-int TURN_FACTOR = 1400;
+const int MAX_SPEED = 70;
+const int TURN_FACTOR = 1400;
 const int BLACK = 250;
 const int BASIC_DELAY = 0;
 const int IDLE_DELAY = 0; // 20
