@@ -22,10 +22,10 @@
 
 // GENERAL DEFINES //
 
-// #define SCREEN
+#define SCREEN
 #define MOTOR
 //#define PRINT_ENC  
-#define SERIAL_ON
+// #define SERIAL_ON
 #define SERIAL_HW
 #ifdef SERIAL_HW
     #define SERIAL Serial
@@ -77,6 +77,9 @@ const int S5 = A0;
 
 const uint8_t SENSOR_ARRAY[] = {S1 ,S2 ,S3 ,S4 ,S5 };
 
+int line_sensor_value;
+int global_cnt = 10;
+int global_line_val = 0;
 
 void setup() {
 
@@ -186,7 +189,9 @@ void setup() {
 
 void loop() {
   if (serial_en==1){
+    #ifdef SERIAL_ON
     serial_cli();
+    #endif
   }
   main_menu();
   // line_follower();
@@ -429,59 +434,55 @@ void line_follower_loop(){
   unsigned long update_time;
   unsigned long time = millis();
   update_time = millis();
-
+  #ifdef SCREEN
+    display.clearDisplay();
+    display.display();
+    display.setTextColor(WHITE);
+    display.setCursor(0, 0);     
+    display.println("line_follower_loop");
+    display.display(); 
+    delay(1000);
+  #endif 
     while (digitalRead (BUTTON0) == HIGH){
         line_follower();
         time = millis();
-        if (time - update_time > 10000) {
+        if (time - update_time > 1000) {
           update_display();
           update_time = time;
         }
-
     } 
 }
 
 void line_follower(){
-  int line_sensor_value;
   int pid;
   int motor_R_speed = 0;
   int motor_L_speed = 0;
   int split_number = 0;
 
-  
   line_sensor_value = read_line_sensor(); 
-  if (line_sensor_value != -1){
-    line_sensor_value-=2000;
-    int spl = -1; // TODO FIXME (remove)
-    if(spl == -1){
-      final_line_sensor_value = line_sensor_value;
-    }
-
-    else{
-      if(spl == -2){
-        drive_motor(RIGHT,40);
-        drive_motor(LEFT,40);
-        delay(150);
-        stop_motor(RIGHT);
-        stop_motor(LEFT);
-      }
-      final_line_sensor_value = spl - 3000;
-          
-
-    }
-  }
-  else {
-
+  if (line_sensor_value == -512){    
     if(Perror_old >= 0){
-      final_line_sensor_value = 2000;
+      line_sensor_value = 500;
     }
     else{
-      final_line_sensor_value = -2000;
+      line_sensor_value = -500;
     }
   }
-  pid = PID(final_line_sensor_value,Perror_old);
-  Perror_old = final_line_sensor_value;
+  
+  pid = PID(line_sensor_value,Perror_old);
+  Perror_old = line_sensor_value;
+  #ifdef SCREEN
+    display.clearDisplay();
+    display.display();
+    display.setTextColor(WHITE);
+    display.setCursor(0, 0);     
+    display.println("line_follower START. ");
+    display.println(line_sensor_value);
+    // display.println(global_line_val);
 
+    display.display(); 
+    // delay(1000);
+  #endif 
   //motor_L_speed = (50 + pid);
   //motor_R_speed = (50 - pid);
 
@@ -507,6 +508,8 @@ void line_follower(){
 #ifdef SERIAL_ON
 
   //time = millis();
+  SERIAL.print(", line= ");
+  SERIAL.print(line_sensor_value);  
   SERIAL.print(", v= ");
   SERIAL.print(v);
   
@@ -586,11 +589,11 @@ int read_line_sensor() {
   s4_value = constrain(s4_value,S_MIN_ARRAY[3],S_MAX_ARRAY[3]);
   s5_value = constrain(s5_value,S_MIN_ARRAY[4],S_MAX_ARRAY[4]);
 
-  s1_value = map(s1_value,S_MIN_ARRAY[0],S_MAX_ARRAY[0],0,1000);
-  s2_value = map(s2_value,S_MIN_ARRAY[1],S_MAX_ARRAY[1],0,1000);
-  s3_value = map(s3_value,S_MIN_ARRAY[2],S_MAX_ARRAY[2],0,1000);
-  s4_value = map(s4_value,S_MIN_ARRAY[3],S_MAX_ARRAY[3],0,1000);
-  s5_value = map(s5_value,S_MIN_ARRAY[4],S_MAX_ARRAY[4],0,1000);  
+  s1_value = map(s1_value,S_MIN_ARRAY[0],S_MAX_ARRAY[0],1000,0);
+  s2_value = map(s2_value,S_MIN_ARRAY[1],S_MAX_ARRAY[1],1000,0);
+  s3_value = map(s3_value,S_MIN_ARRAY[2],S_MAX_ARRAY[2],1000,0);
+  s4_value = map(s4_value,S_MIN_ARRAY[3],S_MAX_ARRAY[3],1000,0);
+  s5_value = map(s5_value,S_MIN_ARRAY[4],S_MAX_ARRAY[4],1000,0);  
 
   // SERIAL.print("after map: s1_value = ");
   // SERIAL.print(s1_value);
@@ -612,14 +615,19 @@ int read_line_sensor() {
 
   sum = s1_value + s2_value + s3_value + s4_value + s5_value;
 
+  // no line detected
+  if (sum < NO_DETECT_TH) {
+    return -512;
+  }
+
+
   psum = p1 + p2 + p3 + p4 + p5;
 
 
   line = psum / sum;
-  line = line - 1000;
-  
-  SERIAL.print(",line = ");
-  SERIAL.println(line);
+  global_line_val = line;
+  line = (line - 3000)/4; //range=[-500,500]
+  line = constrain(line,-500,500);
   return line;
 }
 
@@ -747,9 +755,9 @@ char* prog_num_to_str(prog_number_t prog) {
 int PID (int line_sensor_value, int Perror_old) {
   int Perror = line_sensor_value;
   int Derror = (Perror - Perror_old);
-  int f;
+  int f=0;
 
-  if( abs(Perror) < 1100){
+  if( abs(Ierror) < MAX_IERROR_VAL){
     if( abs (Perror) < 20){
       Ierror = 0;
     }
@@ -757,8 +765,8 @@ int PID (int line_sensor_value, int Perror_old) {
       Ierror += Perror;
     }
   }
-  else{
-    Ierror = 0;
+  else {
+    Ierror = 0; // reset the I value
   }
 //      max 50,              max 30              max 10
   f = Perror / FACTOR_P + Derror / FACTOR_D + Ierror / FACTOR_I;
@@ -912,6 +920,8 @@ void update_display() {
     display.setCursor(0, 0);     
     display.print("Battery: ");
     display.println(test_battery_level());
+    display.print("Sensor value: ");
+    display.println(line_sensor_value);    
     display.display();  
   #endif
   if (serial_en) {
