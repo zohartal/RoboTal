@@ -446,7 +446,7 @@ void line_follower_loop(){
     while (digitalRead (BUTTON0) == HIGH){
         line_follower();
         time = millis();
-        if (time - update_time > 1000) {
+        if (time - update_time > 10000) {
           update_display();
           update_time = time;
         }
@@ -454,6 +454,7 @@ void line_follower_loop(){
 }
 
 void line_follower(){
+  int i;
   int pid;
   int motor_R_speed = 0;
   int motor_L_speed = 0;
@@ -471,18 +472,7 @@ void line_follower(){
   
   pid = PID(line_sensor_value,Perror_old);
   Perror_old = line_sensor_value;
-  #ifdef SCREEN
-    display.clearDisplay();
-    display.display();
-    display.setTextColor(WHITE);
-    display.setCursor(0, 0);     
-    display.println("line_follower START. ");
-    display.println(line_sensor_value);
-    // display.println(global_line_val);
 
-    display.display(); 
-    // delay(1000);
-  #endif 
   //motor_L_speed = (50 + pid);
   //motor_R_speed = (50 - pid);
 
@@ -504,7 +494,20 @@ void line_follower(){
     motor_L_speed = v - vm;
     motor_R_speed = v;
   }
-
+  #ifdef SCREEN
+    display.clearDisplay(); 
+    display.display(); 
+    display.setCursor(0, 0);     
+    display.print("ln=");
+    display.print(line_sensor_value);
+    display.print(", PID=");
+    display.println(pid);
+    display.print("R=");
+    display.print(motor_R_speed);
+    display.print(", L=");
+    display.println(motor_L_speed);            
+    display.display(); 
+  #endif 
 #ifdef SERIAL_ON
 
   //time = millis();
@@ -534,19 +537,19 @@ void line_follower(){
   drive_motor(RIGHT, motor_R_speed);
   drive_motor(LEFT, motor_L_speed);
 
-#ifdef PRINT_ENC
-  if (time - time_flag > 1000) {
-      display.clearDisplay();
-      display.setCursor(0, 0);
-      sprintf(string_for_display,"r: %d ",motor_r_cnt);
-      display.print(string_for_display);
-      sprintf(string_for_display,"l: %d ",motor_l_cnt);
-      display.println(string_for_display);
-      display.display();  
+// #ifdef PRINT_ENC
+//   if (time - time_flag > 1000) {
+//       display.clearDisplay();
+//       display.setCursor(0, 0);
+//       sprintf(string_for_display,"r: %d ",motor_r_cnt);
+//       display.print(string_for_display);
+//       sprintf(string_for_display,"l: %d ",motor_l_cnt);
+//       display.println(string_for_display);
+//       display.display();  
   
-      time_flag = time;
-  }
-#endif
+//       time_flag = time;
+//   }
+// #endif
   return;
 }
 
@@ -917,11 +920,9 @@ void update_display() {
     display.clearDisplay();
     display.display();
     display.setTextColor(WHITE);
-    display.setCursor(0, 0);     
+    display.setCursor(0, 3);     
     display.print("Battery: ");
-    display.println(test_battery_level());
-    display.print("Sensor value: ");
-    display.println(line_sensor_value);    
+    display.println(test_battery_level());    
     display.display();  
   #endif
   if (serial_en) {
